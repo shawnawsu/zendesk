@@ -2,12 +2,12 @@
 
 /**
  * @file
- * The Zendesk module helps you to remote authenticate your users 
- * using Drupal 
+ * The Zendesk module helps you to interact with zendesk using Drupal.
  *
- * authors: 
+ * authors:
  * Tom Deryckere (Tom.Deryckere@gmail.com)
  * Mark Koester (https://github.com/markwk/zendesk)
+ *
  */
 
 /**
@@ -16,7 +16,7 @@
 function zendesk_permission() {
   return array(
     'configure zendesk' => array(
-      'title' => t('Configure Zendesk'), 
+      'title' => t('Configure Zendesk'),
       'description' => t('Configure Drupal settings to communicate with Zendesk.'),
     ),
   );
@@ -54,7 +54,100 @@ function zendesk_menu() {
 }
 
 /**
- * Remote authentication script (see: http://www.zendesk.com/api/remote_authentication)
+ * Initialization of the zendesk library.
+ */
+function zendesk_initialize_library() {
+  $apiKey     = variable_get('zendesk_api_token', '');
+  $user       = variable_get('zendesk_api_mail', '');
+  $subDomain  = variable_get('zendesk_api_group', '');
+  $zd         = new Zendesk($apiKey, $user, $subDomain);
+  return $zd;
+}
+
+/**
+ * Helper function to retrieve zendesk id of the user.
+ */
+function _zendesk_get_user($uid) {
+  $query = db_select('zendesk_users', 'zu')
+      ->fields('zu', array('uid', 'zid'))->condition('zu.uid', $uid, '=');
+  $result = $query->execute();
+  if ($result->rowCount() <> 0) {
+    foreach ($result as $user) {
+      return $user->zid;
+    }
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Implements hook_user_insert().
+ */
+function zendesk_user_insert(&$edit, $account, $category) {
+  if (variable_get('zendesk_api_sync_users', 0)) {
+    zendesk_create_user($account);
+  }
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function zendesk_user_update(&$edit, $account, $category) {
+  if (variable_get('zendesk_api_sync_users', 0)) {
+    if ($user_id = _zendesk_get_user($account->uid)) {
+      $zd = zendesk_initialize_library();
+      $data = json_encode(array('user' => array('id' => $user_id, 'name' => $account->name, 'email' => $account->mail, 'role' => 'end-user')), JSON_FORCE_OBJECT);
+      $result = $zd->call('/users/' . $user_id, $data, 'PUT');
+    }
+  }
+}
+
+/**
+* Implements hook_user_delete().
+*/
+function zendesk_user_delete(&$edit, $account, $category) {
+  if (variable_get('zendesk_api_sync_users', 0)) {
+    if ($user_id = _zendesk_get_user($account->uid)) {
+      $zd = zendesk_initialize_library();
+      $data = json_encode(array('user' => array('id' => $user_id, 'name' => $account->name, 'email' => $account->mail, 'suspended' => TRUE)), JSON_FORCE_OBJECT);
+      $result = $zd->call('/users/' . $user_id, $data, 'PUT');
+    }
+  }
+}
+
+/**
+ * Create a user on Zendesk's side.
+ *
+ * @param object $account
+ *   The Drupal user object that we want to create on zendesk.
+ * @return mixed
+ *   The zendesk's user id if succeded, FALSE otherwise.
+ */
+function zendesk_create_user($account) {
+  $zd = zendesk_initialize_library();
+  $data = json_encode(array('user' => array('name' => $account->name, 'email' => $account->mail, 'role' => 'end-user')), JSON_FORCE_OBJECT);
+  $result = $zd->call("/users", $data, 'POST');
+   if (!empty($result->error)) {
+    watchdog('zendesk', '%description: %error', array('%description' => $result->description, '%error' => print_r($result->details, 1)), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  else {
+    db_insert('zendesk_users')
+      ->fields(array(
+        'uid' => $account->uid,
+        'zid' => $result->user->id,
+      ))
+      ->execute();
+    return $result->user->id;
+  }
+}
+
+
+/**
+ * Remote authentication script.
+ *
+ * @see: http://www.zendesk.com/api/remote_authentication
  */
 function zendesk_remote_authentication() {
   global $user;
@@ -84,33 +177,8 @@ function zendesk_remote_authentication() {
 }
 
 /**
- * Authentication of the user after the user is logged in
+ * Check if the user may be be authenticated or synced with zendesk.
  */
-function zendesk_authenticate_user($destination = '') {
-  global $user;
-  $url = '';
-  $timestamp = empty($_GET['timestamp']) ? time() : $_GET['timestamp'];
-
-  $hash = MD5($user->name . $user->mail . $user->uid . variable_get('zendesk_secret_key', '') . $timestamp);
-  drupal_goto(
-    variable_get('zendesk_url', '') . '/access/remote', array(
-    'query' =>
-    array(
-      'name' => $user->name,
-      'email' => $user->mail,
-      'timestamp' => $timestamp,
-      'hash' => $hash,
-      'external_id' => $user->uid,
-      'return_to' => $destination,
-    )
-    )
-  );
-}
-
-/* * *
- * Check if the user may be be authenticated or synced with zendesk
- */
-
 function zendesk_user_has_access($user) {
   $zendesk_roles = variable_get('zendesk_roles', array());
   if (!array_sum($zendesk_roles)) { // no roles are set, give access
@@ -128,93 +196,24 @@ function zendesk_user_has_access($user) {
 }
 
 /**
- * Implementation of hook_user. Following actions are supported:
- *  Adding a user
- *  Removing a user
- *  Deleting a users
+ * Authentication of the user after the user is logged in.
  */
-function zendesk_user($op, &$edit, &$account, $category = NULL) {
-  switch ($op) {
-    case 'insert':
-      $zd = zendesk_initialize_library();
-      $result = $zd->create(ZENDESK_USERS, array(
-        'details' => array(
-          'email' => $account->mail,
-          'name' => $account->name,
-          'external-id' => $account->uid,
-        ),
-        ));
-      if (!$result) {
-        watchdog('zendesk', 'error code: ' . $zd->result['code'], WATCHDOG_ERROR);
-      }
-      else {
-        db_insert('zendesk_users')
-          ->fields(array(
-            'uid' => $account->uid,
-            'zid' => $result,
-          ))
-          ->execute();
-      }
-      break;
-    case 'update':
-      $zd = zendesk_initialize_library();
-      $zendesk_id = zendesk_get_user($account->uid);
-      $result = $zd->update(ZENDESK_USERS, array(
-        'id' => $zendesk_id,
-        'details' => array(
-          'email' => $account->mail,
-          'name' => $account->name,
-          'external-id' => $account->uid,
-        ),
-        )
-      );
-      if (!$result) {
-        watchdog('zendesk', 'error: ' . $zd->result['code'], WATCHDOG_ERROR);
-      }
-      break;
-    case 'delete':
-      $zd = zendesk_initialize_library();
-      $zendesk_id = zendesk_get_user($account->uid);
-      $result = $zd->delete(ZENDESK_USERS, array('id' => $zendesk_id));
-      if (!$result) {
-        watchdog('zendesk', 'error: ' . $zd->result['code'], WATCHDOG_ERROR);
-      }
-      else {
-        db_delete('zendesk_users')->condition('uid', $account->uid, '=')->execute();
-      }
-      break;
-  }
-}
+function zendesk_authenticate_user($destination = '') {
+  global $user;
+  $timestamp = empty($_GET['timestamp']) ? time() : $_GET['timestamp'];
 
-/**
- * Helper function to retrieve zendesk id of the user
- */
-function zendesk_get_user($uid) {
-  $query = db_select('zendesk_users', 'zu')
-      ->fields('zu', array('uid', 'zid'))->condition('zu.uid', $uid, '=');
-  $result = $query->execute();
-  if ($result->rowCount() <> 0) {
-    foreach ($result as $user) {
-      return $user->zid;
-    }
-  }
-  else {
-    return FALSE;
-  }
-}
-
-/**
- * Initialization of the zendesk library 
- */
-function zendesk_initialize_library() {
-  require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'zendesk') . "/lib/Zendesk.lib.php";
-  $zd = new Zendesk(variable_get('zendesk_api_group', ''), variable_get('zendesk_api_mail', ''), variable_get('zendesk_api_pass', ''), FALSE);
-  return $zd;
-}
-
-/**
- * Zendesk redirect
- */
-function zendesk_redirect() {
-  drupal_goto(variable_get('zendesk_url', ''));
+  $hash = md5($user->name . $user->mail . $user->uid . variable_get('zendesk_secret_key', '') . $timestamp);
+  drupal_goto(
+    variable_get('zendesk_url', '') . '/access/remote', array(
+    'query' =>
+      array(
+        'name' => $user->name,
+        'email' => $user->mail,
+        'timestamp' => $timestamp,
+        'hash' => $hash,
+        'external_id' => $user->uid,
+        'return_to' => $destination,
+      )
+    )
+  );
 }

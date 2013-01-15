@@ -35,11 +35,11 @@ function zendesk_schema() {
  */
 function zendesk_uninstall() {
   variable_del('zendesk_url');
+  variable_del('zendesk_api_token');
   variable_del('zendesk_secret_key');
-  variable_del('zendesk_api_enable');
+  variable_del('zendesk_api_sync_users');
   variable_del('zendesk_api_group');
   variable_del('zendesk_api_mail');
-  variable_del('zendesk_api_pass');
   variable_del('zendesk_roles');
   variable_del('zendesk_no_permission_page');
 }

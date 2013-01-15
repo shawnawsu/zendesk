@@ -1,9 +1,9 @@
-name = Zendesk remote authentication
-description = "This module enables remote authentication with zendesk"
-package = Custom modules
+name = Zendesk
+description = "This module handle the integration with zendesk"
 core = 7.x
+package = Zendesk
+configure = admin/config/people/zendesk
 
-files[] = zendesk.module
-files[] = zendesk.install
-files[] = zendesk.admin.inc
-files[] = lib/Zendesk.lib.php
+files[] = zendesk.lib.php
+
+
