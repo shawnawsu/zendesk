@@ -57,6 +57,13 @@ function zendesk_configuration_form() {
     '#description' => t('This is typically the mail address of the zendesk admin account'),
   );
 
+  $form['zendesk']['zendesk_api']['zendesk_authed_user'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Create user as verified users'),
+    '#default_value' => variable_get('zendesk_authed_user', FALSE),
+    '#description' => t('Check this is you want to create user as already verified users.'),
+  );
+
   // Role-based visibility settings.
   $result = db_query('SELECT rid, name FROM {role} WHERE rid != 1 ORDER BY name');
   $role_options = array();

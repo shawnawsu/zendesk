@@ -126,7 +126,12 @@ function zendesk_user_delete(&$edit, $account, $category) {
  */
 function zendesk_create_user($account) {
   $zd = zendesk_initialize_library();
-  $data = json_encode(array('user' => array('name' => $account->name, 'email' => $account->mail, 'role' => 'end-user')), JSON_FORCE_OBJECT);
+  $data = array('user' => array('name' => $account->name, 'email' => $account->mail, 'role' => 'end-user'));
+  if (variable_get('zendesk_authed_user', FALSE)) {
+    $data['user'] += array('verified' => TRUE);
+  }
+
+  $data = json_encode($data, JSON_FORCE_OBJECT);
   $result = $zd->call("/users", $data, 'POST');
    if (!empty($result->error)) {
     watchdog('zendesk', '%description: %error', array('%description' => $result->description, '%error' => print_r($result->details, 1)), WATCHDOG_ERROR);
