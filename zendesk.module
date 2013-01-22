@@ -134,6 +134,11 @@ function zendesk_create_user($account) {
   $data = json_encode($data, JSON_FORCE_OBJECT);
   $result = $zd->call("/users", $data, 'POST');
    if (!empty($result->error)) {
+     // Try to handle special case where a user can be on zendesk's side, but
+     // not recorded on our table.
+     if ($result->error = 'RecordInvalid' && $result->details->email[0]->description == 'Email: ' . $account->mail . ' is already being used by another user') {
+       return zendesk_sync_user_back($account);
+     }
     watchdog('zendesk', '%description: %error', array('%description' => $result->description, '%error' => print_r($result->details, 1)), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -148,6 +153,30 @@ function zendesk_create_user($account) {
   }
 }
 
+/**
+ * If a user already exist on zendesk's side but not our the drupal side, add
+ * it in our database.
+ *
+ * @param $account
+ * @return mixed
+ */
+function zendesk_sync_user_back($account) {
+  // Look for the user.
+  $zd = zendesk_initialize_library();
+  $result = $zd->call('/users/search.json?query=' . $account->mail, '', 'GET');
+  if (isset($result->users[0]->id)) {
+    db_insert('zendesk_users')
+       ->fields(array(
+         'uid' => $account->uid,
+         'zid' => $result->users[0]->id,
+       ))
+       ->execute();
+    return $result->users[0]->id;
+  }
+  else {
+    return FALSE;
+  }
+}
 
 /**
  * Remote authentication script.
