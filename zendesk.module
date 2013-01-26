@@ -7,7 +7,6 @@
  * authors:
  * Tom Deryckere (Tom.Deryckere@gmail.com)
  * Mark Koester (https://github.com/markwk/zendesk)
- *
  */
 
 /**
@@ -26,7 +25,7 @@ function zendesk_permission() {
  * Implements hook_menu().
  */
 function zendesk_menu() {
-  // callback use by zendesk for remote authentication
+  // Callback use by zendesk for remote authentication.
   $items['services/zendesk'] = array(
     'title' => 'Zendesk remote authentication',
     'page callback' => 'zendesk_remote_authentication',
@@ -47,7 +46,7 @@ function zendesk_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('zendesk_configuration_form'),
     'type' => MENU_NORMAL_ITEM,
-    'description' => t('Configure Drupal settings to communicate with Zendesk'),
+    'description' => 'Configure Drupal settings to communicate with Zendesk',
     'file' => 'zendesk.admin.inc',
   );
   return $items;
@@ -57,10 +56,10 @@ function zendesk_menu() {
  * Initialization of the zendesk library.
  */
 function zendesk_initialize_library() {
-  $apiKey     = variable_get('zendesk_api_token', '');
+  $api_key    = variable_get('zendesk_api_token', '');
   $user       = variable_get('zendesk_api_mail', '');
-  $subDomain  = variable_get('zendesk_api_group', '');
-  $zd         = new Zendesk($apiKey, $user, $subDomain);
+  $subdomain  = variable_get('zendesk_api_group', '');
+  $zd         = new Zendesk($api_key, $user, $subdomain);
   return $zd;
 }
 
@@ -97,7 +96,14 @@ function zendesk_user_update(&$edit, $account, $category) {
   if (variable_get('zendesk_api_sync_users', 0)) {
     if ($user_id = _zendesk_get_user($account->uid)) {
       $zd = zendesk_initialize_library();
-      $data = json_encode(array('user' => array('id' => $user_id, 'name' => $account->name, 'email' => $account->mail, 'role' => 'end-user')), JSON_FORCE_OBJECT);
+      $data = json_encode(array(
+        'user' => array(
+          'id' => $user_id,
+          'name' => $account->name,
+          'email' => $account->mail,
+          'role' => 'end-user'
+        )
+      ), JSON_FORCE_OBJECT);
       $result = $zd->call('/users/' . $user_id, $data, 'PUT');
     }
   }
@@ -110,7 +116,14 @@ function zendesk_user_delete(&$edit, $account, $category) {
   if (variable_get('zendesk_api_sync_users', 0)) {
     if ($user_id = _zendesk_get_user($account->uid)) {
       $zd = zendesk_initialize_library();
-      $data = json_encode(array('user' => array('id' => $user_id, 'name' => $account->name, 'email' => $account->mail, 'suspended' => TRUE)), JSON_FORCE_OBJECT);
+      $data = json_encode(array(
+        'user' => array(
+          'id' => $user_id,
+          'name' => $account->name,
+          'email' => $account->mail,
+          'suspended' => TRUE
+        )
+      ), JSON_FORCE_OBJECT);
       $result = $zd->call('/users/' . $user_id, $data, 'PUT');
     }
   }
@@ -121,25 +134,35 @@ function zendesk_user_delete(&$edit, $account, $category) {
  *
  * @param object $account
  *   The Drupal user object that we want to create on zendesk.
+ *
  * @return mixed
- *   The zendesk's user id if succeded, FALSE otherwise.
+ *   The zendesk's user id if succeeded, FALSE otherwise.
  */
 function zendesk_create_user($account) {
   $zd = zendesk_initialize_library();
-  $data = array('user' => array('name' => $account->name, 'email' => $account->mail, 'role' => 'end-user'));
+  $data = array(
+    'user' => array(
+      'name' => $account->name,
+      'email' => $account->mail,
+      'role' => 'end-user'
+    )
+  );
   if (variable_get('zendesk_authed_user', FALSE)) {
     $data['user'] += array('verified' => TRUE);
   }
 
   $data = json_encode($data, JSON_FORCE_OBJECT);
   $result = $zd->call("/users", $data, 'POST');
-   if (!empty($result->error)) {
-     // Try to handle special case where a user can be on zendesk's side, but
-     // not recorded on our table.
-     if ($result->error = 'RecordInvalid' && $result->details->email[0]->description == 'Email: ' . $account->mail . ' is already being used by another user') {
-       return zendesk_sync_user_back($account);
-     }
-    watchdog('zendesk', '%description: %error', array('%description' => $result->description, '%error' => print_r($result->details, 1)), WATCHDOG_ERROR);
+  if (!empty($result->error)) {
+    // Try to handle special case where a user can be on zendesk's side, but
+    // not recorded on our table.
+    if ($result->error = 'RecordInvalid' && $result->details->email[0]->description == 'Email: ' . $account->mail . ' is already being used by another user') {
+      return zendesk_sync_user_back($account);
+    }
+    watchdog('zendesk', '%description: %error', array(
+      '%description' => $result->description,
+      '%error' => print_r($result->details, 1)
+    ), WATCHDOG_ERROR);
     return FALSE;
   }
   else {
@@ -154,11 +177,16 @@ function zendesk_create_user($account) {
 }
 
 /**
+ * Try to sync user from zendesk on drupal side.
+ *
  * If a user already exist on zendesk's side but not our the drupal side, add
  * it in our database.
  *
- * @param $account
+ * @param object $account
+ *   An object containing the user account.
+ *
  * @return mixed
+ *   Zendesk's user ID if succeeded, FALSE otherwise.
  */
 function zendesk_sync_user_back($account) {
   // Look for the user.
@@ -185,9 +213,10 @@ function zendesk_sync_user_back($account) {
  */
 function zendesk_remote_authentication() {
   global $user;
-  // check if anonymous, if so redirect to login with destination the path where he comes from
+  // Check if anonymous, if so redirect to login with destination the path where
+  // he comes from.
   if ($user->uid) {
-    //check if user role is allowed to be authenticated
+    // Check if user role is allowed to be authenticated.
     if (zendesk_user_has_access($user)) {
       $destination = '';
       if (!empty($_SESSION['zendesk_page'])) {
@@ -215,7 +244,8 @@ function zendesk_remote_authentication() {
  */
 function zendesk_user_has_access($user) {
   $zendesk_roles = variable_get('zendesk_roles', array());
-  if (!array_sum($zendesk_roles)) { // no roles are set, give access
+  if (!array_sum($zendesk_roles)) {
+    // No roles are set, give access.
     return TRUE;
   }
   else {

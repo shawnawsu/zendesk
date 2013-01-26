@@ -1,27 +1,35 @@
 <?php
 /**
- * Zendesk configuration form
+ * @file
+ * Admin page callback file for the Zendesk module.
+ */
+
+/**
+ * Zendesk configuration form.
  */
 function zendesk_configuration_form() {
- $form['zendesk']['zendesk_conf'] = array(
+
+  $form['zendesk']['zendesk_conf'] = array(
   '#type' => 'fieldset',
   '#title' => 'General configuration'
+  );
 
- );
-  $form['zendesk']['zendesk_conf']['zendesk_url'] =  array (
+  $form['zendesk']['zendesk_conf']['zendesk_url'] = array(
     '#type' => 'textfield',
     '#required' => TRUE,
     '#description' => 'The url of your zendesk support page (e.g. http://yourdomain.zendesk.com).',
     '#default_value' => variable_get('zendesk_url', 'http://yourdomain.zendesk.com'),
   );
-  $form['zendesk']['zendesk_conf']['zendesk_api_token'] = array (
+
+  $form['zendesk']['zendesk_conf']['zendesk_api_token'] = array(
     '#type' => 'textfield',
     '#required' => TRUE,
     '#description' => 'The zendesk API token.',
     '#default_value' => variable_get('zendesk_api_token', 'Zendesk secret key'),
     '#suffix' => t('Use the http://www.yourdomain.com/agent/#/admin/channels page in your zendesk configuration page. (Go to Account -> Channels')
   );
-  $form['zendesk']['zendesk_conf']['zendesk_secret_key'] = array (
+
+  $form['zendesk']['zendesk_conf']['zendesk_secret_key'] = array(
     '#type' => 'textfield',
     '#required' => TRUE,
     '#description' => 'The zendesk SSO secret key.',
@@ -39,7 +47,7 @@ function zendesk_configuration_form() {
   $form['zendesk']['zendesk_api']['zendesk_api_sync_users'] = array(
     '#type' => 'checkbox',
     '#title' => t('Synchronize the Drupal users with Zendesk'),
-    '#default_value'=> variable_get('zendesk_api_sync_users', 0),
+    '#default_value' => variable_get('zendesk_api_sync_users', 0),
     '#description' => t('When accounts are created in your drupal site, updated and delete, push these changes to Zendesk.'),
   );
 
@@ -70,10 +78,12 @@ function zendesk_configuration_form() {
   foreach ($result as $role) {
     $role_options[$role->rid] = $role->name;
   }
+
   $form['zendesk']['zendesk_permissions'] = array(
     '#type' => 'fieldset',
     '#description' => t('Restrict access to zendesk based on user roles. These rules will apply for both user synchronization as remote authentication.'),
   );
+
   $form['zendesk']['zendesk_permissions']['zendesk_roles'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Authenticate only for specific roles'),
@@ -81,6 +91,7 @@ function zendesk_configuration_form() {
     '#options' => $role_options,
     '#description' => t('Select which roles may be authenticated for zendesk. If you select no roles, all authenticated drupal users will be authenticated for Zendesk.'),
   );
+
   $form['zendesk']['zendesk_permissions']['zendesk_no_permission_page'] = array(
     '#type' => 'textfield',
     '#title' => t('No permission page'),
