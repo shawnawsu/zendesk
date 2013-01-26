@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Install, update and uninstall functions for the Zendesk module.
+ */
+
+/**
  * Implements hook_schema().
  */
 function zendesk_schema() {
@@ -24,7 +29,7 @@ function zendesk_schema() {
     ),
     'primary_key' => array('uid', 'zid'),
     'indexes' => array(
-      'uid' => array('uid')
+      'uid' => array('uid'),
     ),
   );
   return $schema;

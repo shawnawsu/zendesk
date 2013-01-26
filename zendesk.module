@@ -101,8 +101,8 @@ function zendesk_user_update(&$edit, $account, $category) {
           'id' => $user_id,
           'name' => $account->name,
           'email' => $account->mail,
-          'role' => 'end-user'
-        )
+          'role' => 'end-user',
+        ),
       ), JSON_FORCE_OBJECT);
       $result = $zd->call('/users/' . $user_id, $data, 'PUT');
     }
@@ -110,8 +110,8 @@ function zendesk_user_update(&$edit, $account, $category) {
 }
 
 /**
-* Implements hook_user_delete().
-*/
+ * Implements hook_user_delete().
+ */
 function zendesk_user_delete(&$edit, $account, $category) {
   if (variable_get('zendesk_api_sync_users', 0)) {
     if ($user_id = _zendesk_get_user($account->uid)) {
@@ -121,8 +121,8 @@ function zendesk_user_delete(&$edit, $account, $category) {
           'id' => $user_id,
           'name' => $account->name,
           'email' => $account->mail,
-          'suspended' => TRUE
-        )
+          'suspended' => TRUE,
+        ),
       ), JSON_FORCE_OBJECT);
       $result = $zd->call('/users/' . $user_id, $data, 'PUT');
     }
@@ -144,8 +144,8 @@ function zendesk_create_user($account) {
     'user' => array(
       'name' => $account->name,
       'email' => $account->mail,
-      'role' => 'end-user'
-    )
+      'role' => 'end-user',
+    ),
   );
   if (variable_get('zendesk_authed_user', FALSE)) {
     $data['user'] += array('verified' => TRUE);
@@ -161,7 +161,7 @@ function zendesk_create_user($account) {
     }
     watchdog('zendesk', '%description: %error', array(
       '%description' => $result->description,
-      '%error' => print_r($result->details, 1)
+      '%error' => print_r($result->details, 1),
     ), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -269,7 +269,7 @@ function zendesk_authenticate_user($destination = '') {
   $hash = md5($user->name . $user->mail . $user->uid . variable_get('zendesk_secret_key', '') . $timestamp);
   drupal_goto(
     variable_get('zendesk_url', '') . '/access/remote', array(
-    'query' =>
+      'query' =>
       array(
         'name' => $user->name,
         'email' => $user->mail,
@@ -277,7 +277,7 @@ function zendesk_authenticate_user($destination = '') {
         'hash' => $hash,
         'external_id' => $user->uid,
         'return_to' => $destination,
-      )
+      ),
     )
   );
 }

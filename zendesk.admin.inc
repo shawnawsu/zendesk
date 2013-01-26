@@ -11,7 +11,7 @@ function zendesk_configuration_form() {
 
   $form['zendesk']['zendesk_conf'] = array(
   '#type' => 'fieldset',
-  '#title' => 'General configuration'
+  '#title' => 'General configuration',
   );
 
   $form['zendesk']['zendesk_conf']['zendesk_url'] = array(
@@ -26,7 +26,7 @@ function zendesk_configuration_form() {
     '#required' => TRUE,
     '#description' => 'The zendesk API token.',
     '#default_value' => variable_get('zendesk_api_token', 'Zendesk secret key'),
-    '#suffix' => t('Use the http://www.yourdomain.com/agent/#/admin/channels page in your zendesk configuration page. (Go to Account -> Channels')
+    '#suffix' => t('Use the http://www.yourdomain.com/agent/#/admin/channels page in your zendesk configuration page. (Go to Account -> Channels'),
   );
 
   $form['zendesk']['zendesk_conf']['zendesk_secret_key'] = array(
@@ -34,7 +34,7 @@ function zendesk_configuration_form() {
     '#required' => TRUE,
     '#description' => 'The zendesk SSO secret key.',
     '#default_value' => variable_get('zendesk_secret_key', 'Zendesk secret key'),
-    '#suffix' => t('Use the http://www.yourdomain.com/agent/#/admin/security page in your zendesk configuration page. (Go to Account -> Security')
+    '#suffix' => t('Use the http://www.yourdomain.com/agent/#/admin/security page in your zendesk configuration page. (Go to Account -> Security'),
   );
 
   $form['zendesk']['zendesk_api'] = array(
