@@ -224,7 +224,9 @@ function zendesk_remote_authentication() {
         unset($_SESSION['zendesk_page']);
       }
       else {
-        $destination = $_GET['return_to'];
+        if (!empty($_GET['return_to'])) {
+          $destination = $_GET['return_to'];
+        }
       }
       zendesk_authenticate_user($destination);
     }

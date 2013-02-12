@@ -10,8 +10,8 @@
 function zendesk_configuration_form() {
 
   $form['zendesk']['zendesk_conf'] = array(
-  '#type' => 'fieldset',
-  '#title' => 'General configuration',
+    '#type' => 'fieldset',
+    '#title' => 'General configuration',
   );
 
   $form['zendesk']['zendesk_conf']['zendesk_url'] = array(
