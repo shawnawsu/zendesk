@@ -59,7 +59,7 @@ function zendesk_initialize_library() {
   $api_key    = variable_get('zendesk_api_token', '');
   $user       = variable_get('zendesk_api_mail', '');
   $subdomain  = variable_get('zendesk_api_group', '');
-  $zd         = new Zendesk($api_key, $user, $subdomain);
+  $zd         = new zendesk($api_key, $user, $subdomain);
   return $zd;
 }
 
