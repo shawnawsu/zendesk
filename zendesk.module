@@ -96,14 +96,21 @@ function zendesk_user_update(&$edit, $account, $category) {
   if (variable_get('zendesk_api_sync_users', 0)) {
     if ($user_id = _zendesk_get_user($account->uid)) {
       $zd = zendesk_initialize_library();
-      $data = json_encode(array(
+      $data = array(
         'user' => array(
           'id' => $user_id,
           'name' => $account->name,
           'email' => $account->mail,
           'role' => 'end-user',
         ),
-      ), JSON_FORCE_OBJECT);
+      );
+
+      // Invoke a alter call to allow other modules to pass data to ZenDesk.
+      drupal_alter(array('zendesk_user', 'zendesk_user_update'), $data, $account);
+
+      $data = drupal_json_encode($data);
+
+
       $result = $zd->call('/users/' . $user_id, $data, 'PUT');
     }
   }
@@ -116,14 +123,16 @@ function zendesk_user_delete(&$edit, $account, $category) {
   if (variable_get('zendesk_api_sync_users', 0)) {
     if ($user_id = _zendesk_get_user($account->uid)) {
       $zd = zendesk_initialize_library();
-      $data = json_encode(array(
+      $data = drupal_json_encode(array(
         'user' => array(
           'id' => $user_id,
           'name' => $account->name,
           'email' => $account->mail,
           'suspended' => TRUE,
         ),
-      ), JSON_FORCE_OBJECT);
+      ));
+
+      // Alter call to omitted since we are destroying the User object.
       $result = $zd->call('/users/' . $user_id, $data, 'PUT');
     }
   }
@@ -151,12 +160,17 @@ function zendesk_create_user($account) {
     $data['user'] += array('verified' => TRUE);
   }
 
-  $data = json_encode($data, JSON_FORCE_OBJECT);
+  // Invoke a alter call to allow other modules to pass data to ZenDesk.
+  drupal_alter(array('zendesk_user', 'zendesk_user_create'), $data, $account);
+  
+  $data = drupal_json_encode($data);
+
   $result = $zd->call("/users", $data, 'POST');
+
   if (!empty($result->error)) {
     // Try to handle special case where a user can be on zendesk's side, but
     // not recorded on our table.
-    if ($result->error = 'RecordInvalid' && $result->details->email[0]->description == 'Email: ' . $account->mail . ' is already being used by another user') {
+    if ($result->error == 'RecordInvalid' && $result->details->email[0]->description == 'Email: ' . $account->mail . ' is already being used by another user') {
       return zendesk_sync_user_back($account);
     }
     watchdog('zendesk', '%description: %error', array(
