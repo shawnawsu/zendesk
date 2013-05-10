@@ -33,13 +33,6 @@ function zendesk_menu() {
     'type' => MENU_CALLBACK,
   );
 
-  $items['zendesk/support'] = array(
-    'title' => 'Zendesk redirection',
-    'page callback' => 'zendesk_redirect',
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );
-
   $items['admin/config/people/zendesk'] = array(
     'title' => 'Zendesk settings',
     'access arguments' => array('configure zendesk'),
