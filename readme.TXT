@@ -1,18 +1,18 @@
 README
 ======
-The zendesk module allows you to integrate your drupal site with the zendesk 
+The zendesk module allows you to integrate your drupal site with the zendesk
 customer support system (http://www.zendesk.com)
 
 Zendesk allows external authentication. This means that your Drupal site can serve
-as authentication service. This way customers have a seamless experience without 
+as authentication service. This way customers have a seamless experience without
 having to log in in both the drupal site and the zendesk support system.
 
 Installation is easy:
 - install the module
-- configure your zendesk account (go to 'Account - Security')
-  * Click "Enable Remote Authentication"
+- configure your zendesk account (go to 'Settings - Security - Single Sign-On')
+  * Enable the "JSON Web Token" strategy.
   * insert the remote authentication url: http://yoursite.com/services/zendesk
-  * optionally you can insert your logout url: http://yoursite.com/logout    
+  * optionally you can insert your logout url: http://yoursite.com/logout
 - go to admin/config/people/zendesk and fill in the url of your zendesk support page (e.g. http://yourdomain.zendesk.com) together with the secret key
 
 Local Development
