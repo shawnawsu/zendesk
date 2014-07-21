@@ -92,7 +92,7 @@ function zendesk_user_update(&$edit, $account, $category) {
       $data = array(
         'user' => array(
           'id' => $user_id,
-          'name' => $account->name,
+          'name' => format_username($account),
           'email' => $account->mail,
           'role' => 'end-user',
         ),
@@ -119,7 +119,7 @@ function zendesk_user_delete(&$edit, $account, $category) {
       $data = drupal_json_encode(array(
         'user' => array(
           'id' => $user_id,
-          'name' => $account->name,
+          'name' => format_username($account),
           'email' => $account->mail,
           'suspended' => TRUE,
         ),
@@ -144,7 +144,7 @@ function zendesk_create_user($account) {
   $zd = zendesk_initialize_library();
   $data = array(
     'user' => array(
-      'name' => $account->name,
+      'name' => format_username($account),
       'email' => $account->mail,
       'role' => 'end-user',
     ),
@@ -266,7 +266,7 @@ function zendesk_authenticate_user() {
   $token = array(
     'jti'   => sha1($user->uid . REQUEST_TIME . rand()),
     'iat'   => REQUEST_TIME,
-    'name'  => $user->name,
+    'name'  => format_username($user),
     'email' => $user->mail,
     'external_id' => $user->uid,
   );
