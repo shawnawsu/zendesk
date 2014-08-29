@@ -112,7 +112,7 @@ function zendesk_user_update(&$edit, $account, $category) {
 /**
  * Implements hook_user_delete().
  */
-function zendesk_user_delete(&$edit, $account, $category) {
+function zendesk_user_delete($account) {
   if (variable_get('zendesk_api_sync_users', 0)) {
     if ($user_id = _zendesk_get_user($account->uid)) {
       $zd = zendesk_initialize_library();
