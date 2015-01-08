@@ -233,7 +233,8 @@ function zendesk_remote_authentication() {
     }
   }
   else {
-    drupal_goto('user', array('query' => array('destination' => 'services/zendesk')));
+    // Make sure we pass along additional info from Zendesk as we goto.
+    drupal_goto('user', array('query' => drupal_get_destination()));
   }
 }
 
@@ -271,11 +272,19 @@ function zendesk_authenticate_user() {
     'external_id' => $user->uid,
   );
   $key = variable_get('zendesk_secret_key', '');
+  // Start the query params.
+  $query = array();
   $jwt = zendesk_jwt_encode($token, $key);
+  $query['jwt'] = $jwt;
+  // Add in the passed-along return_to param, if any.
+  $current_params = drupal_get_query_parameters();
+  if(isset($current_params['return_to'])) {
+    $query['return_to'] = $current_params['return_to'];
+  }
 
-  // Redirect
+  // Redirect with attached GET params
   $url = variable_get('zendesk_url', '') . '/access/jwt';
-  drupal_goto($url, array('query' => array('jwt' => $jwt)));
+  drupal_goto($url, array('query' => $query));
 }
 
 /**
