@@ -31,7 +31,7 @@ class zendesk
 			throw new Exception('Cannot connect or authentice with the Zendesk API');
 		}
 	}
-	
+
 	/**
 	 * Perform an API call.
 	 *
@@ -51,23 +51,44 @@ class zendesk
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($ch, CURLOPT_MAXREDIRS, 10 );
-		curl_setopt($ch, CURLOPT_URL, $this->base.$url);
 		curl_setopt($ch, CURLOPT_USERPWD, $this->user."/token:".$this->api_key);
-		switch($action){
-			case "POST":
+		switch ($action) {
+      case "POST":
 				curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
 				curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
 				break;
 			case "GET":
 				curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
-				break;
+        break;
+      case "DELETE":
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
 			case "PUT":
 				curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-				curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+      case "UPLOAD":
+        // In this case the $json var should be a Drupal file object
+        $file = fopen($json->uri, 'r');
+        $filesize = $json->filesize;
+        $filedata = fread($file, $filesize);
+        curl_setopt($ch, CURLOPT_INFILE, $file);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $filedata);
+        curl_setopt($ch, CURLOPT_INFILESIZE, $filesize);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        $url .= '?' . http_build_query(array("filename" => $json->filename));
 			default:
 				break;
-		}
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json'));
+    }
+    // Different headers for a file transfer.
+    switch ($action) {
+      case "UPLOAD":
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/binary'));
+        break;
+      default:
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json'));
+        break;
+    }
+
+		curl_setopt($ch, CURLOPT_URL, $this->base.$url);
 		curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -77,8 +98,8 @@ class zendesk
 		$decoded = json_decode($output);
 
 		return is_null($decoded) ? $output : $decoded;
-	}
-	
+  }
+
 	/**
 	 * Tests the API using /users/ping
 	 *
