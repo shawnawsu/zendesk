@@ -71,11 +71,15 @@ class zendesk
       // In this case the $json var should be a Drupal file object
       $file = fopen($json->uri, 'r');
       $filesize = $json->filesize;
-      $filedata = fread($file, $filesize);
-      curl_setopt($ch, CURLOPT_INFILE, $file);
+      $filedata = '';
+      while (!feof($file)) {
+        $filedata .= fread($file);
+      }
       curl_setopt($ch, CURLOPT_POSTFIELDS, $filedata);
+      curl_setopt($ch, CURLOPT_INFILE, $file);
       curl_setopt($ch, CURLOPT_INFILESIZE, $filesize);
       curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+      curl_setopt($ch, CURLOPT_BINARYTRANSFER, TRUE);
       $url .= '?' . http_build_query(array("filename" => $json->filename));
       break;
     default:
