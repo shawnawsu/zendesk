@@ -73,7 +73,7 @@ class zendesk
       $filesize = $json->filesize;
       $filedata = '';
       while (!feof($file)) {
-        $filedata .= fread($file);
+        $filedata .= fread($file, 8192);
       }
       curl_setopt($ch, CURLOPT_POSTFIELDS, $filedata);
       curl_setopt($ch, CURLOPT_INFILE, $file);
