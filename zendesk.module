@@ -155,7 +155,7 @@ function zendesk_create_user($account) {
 
   // Invoke a alter call to allow other modules to pass data to ZenDesk.
   drupal_alter(array('zendesk_user', 'zendesk_user_create'), $data, $account);
-  
+
   $data = drupal_json_encode($data);
 
   $result = $zd->call("/users", $data, 'POST');
@@ -334,3 +334,90 @@ function zendesk_urlsafeb64_encode($data) {
   $b64 = base64_encode($data);
   return str_replace(array('+', '/', '\r', '\n', '='), array('-', '_'), $b64);
 }
+
+/**
+ * Implements hook_advanced_queue_info().
+ */
+function zendesk_advanced_queue_info() {
+  $items['zendesk_incremental_tickets'] = array(
+    'label' => t('Zendesk Incremental Tickets Pull'),
+    'worker callback' => 'zendesk_incremental_tickets_worker',
+    'delete when completed' => FALSE, // What is dead may never die...
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_cron().
+ */
+function zendesk_cron() {
+  // @todo: Update ticket fields definition.
+
+  // Make sure that the ticket incremental worker is queued in some non-failed state.
+  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_incremental_tickets' AND status != 2;")->fetchColumn(0);
+  if (!$result) {
+    $last_success = db_query("SELECT * FROM advancedqueue WHERE name = 'zendesk_incremental_tickets' AND status = 1 ORDER BY item_id DESC;")->fetchObject();
+    $start_time = ($last_success ? unserialize($last_success->data)['start_time'] : 0);
+
+    $data = array(
+      'title' => t('Zendesk incremental tickets pull'),
+      'start_time' => $start_time,
+    );
+
+    $queue = DrupalQueue::get('zendesk_incremental_tickets');
+    $queue->createItem($data);
+  }
+}
+
+/**
+ * Write a Zendesk field definition to the database.
+ */
+function zendesk_ticket_field_write_record($field_def) {
+  // @todo: This thing
+}
+
+/**
+ * Write a ticket record from JSON to the database.
+ */
+function zendesk_ticket_write_record($ticket) {
+  // @todo: This thing
+  // Convert values.
+
+  // Assemble merge.
+
+  // Write custom field values.
+
+}
+
+function zendesk_ticket_field_value_write_record($field_value) {
+  // @todo: This thing
+}
+
+function zendesk_incremental_tickets_worker($item) {
+  $start_time = $item->data['start_time'];
+  $zd = zendesk_initialize_library();
+  $url = '/incremental/tickets.json?start_time=' . $start_time;
+  do {
+    $response = $zd->call($url, '', 'GET');
+
+    $count = $response->count;
+    $url = str_replace($zd->base, '', $response->next_page);
+
+    foreach ($response->tickets as $ticket) {
+      zendesk_ticket_write_record($ticket);
+    }
+
+  } while ($count >= 1000);
+
+  $queue = DrupalQueue::get('zendesk_incremental_tickets');
+
+  $item->data['start_time'] = $response->end_time;
+  $item->created += 600;
+  // We requeue ourselves here with a +10 minute go-time and an updated
+  // Zendesk increment time.
+  $queue->requeueItem($item);
+
+}
+
+

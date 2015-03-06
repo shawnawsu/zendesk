@@ -32,7 +32,393 @@ function zendesk_schema() {
       'uid' => array('uid'),
     ),
   );
+
+  $schema['zendesk_tickets'] = array(
+    'fields' => array(
+      'id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+        'default' => NULL,
+      ),
+      'external_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'created_at' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'updated_at' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'subject' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'raw_subject' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'priority' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'status' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'recipient' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'requester_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'submitter_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'assignee_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'organization_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'group_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'collaborator_ids' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'forum_topic_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'problem_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => FALSE,
+      ),
+      'has_incidents' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'due_at' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'tags' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+    ),
+    'primary key' => array(
+      'id',
+    ),
+    'unique keys' => array(),
+    'indexes' => array(
+      'type' => array(
+        'type',
+      ),
+    ),
+  );
+
+  $schema['zendesk_ticket_fields'] = array(
+    'fields' => array(
+      'id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'title' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'raw_title' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'raw_description' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'position' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'active' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'required' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'collapsed_for_agents' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'regexp_for_validation' => array(
+        'type' => 'varchar',
+        'length' => 0,
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+        'default' => NULL,
+      ),
+      'title_in_portal' => array(
+        'type' => 'varchar',
+        'length' => 0,
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+        'default' => NULL,
+      ),
+      'raw_title_in_portal' => array(
+        'type' => 'varchar',
+        'length' => 0,
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+        'default' => NULL,
+      ),
+      'visible_in_portal' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'editable_in_portal' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'required_in_portal' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'tag' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'created_at' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'updated_at' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'system_field_options' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+        'binary' => FALSE,
+      ),
+      'custom_field_options' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+        'binary' => FALSE,
+      ),
+      'removable' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array(
+      'id',
+    ),
+    'unique keys' => array(),
+    'indexes' => array(
+      'type' => array(
+        'type',
+      ),
+    ),
+  );
+
+  $schema['zendesk_ticket_field_values'] = array(
+    'fields' => array(
+      'ticket_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'field_id' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'value' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+        'default' => NULL,
+      ),
+    ),
+    'primary key' => array(
+      'ticket_id',
+      'field_id',
+    ),
+    'unique keys' => array(),
+    'indexes' => array(),
+  );
+
   return $schema;
+}
+
+/**
+ * Add the tickets table.
+ */
+function zendesk_update_7101(&$sandbox) {
+  $schema = zendesk_schema();
+  db_add_table('zendesk_tickets', $schema['zendesk_tickets']);
+  db_add_table('zendesk_ticket_fields', $schema['zendesk_ticket_fields']);
+  db_add_table('zendesk_ticket_field_values', $schema['zendesk_ticket_field_values']);
+
+  return "Added Zendesk tickets tables.";
 }
 
 /**
