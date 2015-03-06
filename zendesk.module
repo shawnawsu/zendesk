@@ -383,11 +383,54 @@ function zendesk_ticket_field_write_record($field_def) {
 function zendesk_ticket_write_record($ticket) {
   // @todo: This thing
   // Convert values.
+  $schema = drupal_get_schema('zendesk_tickets');
 
+  foreach ($schema 'fields'] as $field => $info) {
+    // Skip the ticket ID field, it does not need to be updated.
+    if ($field == 'id') {
+      continue;
+    }
+
+    if (!property_exists($ticket, $field)) {
+      // Skip fields that are missing for any reason.
+      continue;
+    }
+
+    // Build array of fields to update or insert.
+    if (empty($info['serialize'])) {
+      $fields[$field] = $ticket->$field;
+    }
+    else {
+      $fields[$field] = serialize($ticket->$field);
+    }
+
+    // Type cast to proper datatypes.
+    if (isset($ticket->$field) || !empty($info['not null'])) {
+      if ($info['type'] == 'int' || $info['type'] == 'serial') {
+        $fields[$field] = (int) $fields[$field];
+      }
+      elseif ($info['type'] == 'float') {
+        $fields[$field] = (float) $fields[$field];
+      }
+      else {
+        $fields[$field] = (string) $fields[$field];
+      }
+    }
+  }
   // Assemble merge.
+  $query = db_merge('zendesk_tickets')->fields($fields)->key(array('id' => $ticket->id))->execute();
+  if (!$query) {
+    throw Exception(t('Failed to insert Zendesk ticket ID: ' . $ticket->id));
+  }
 
   // Write custom field values.
+  foreach ($ticket->fields as $field_value) {
+    $field_value->field_id = $field_value->id;
+    $field_value->ticket_id = $ticket->id;
+    zendesk_ticket_field_value_write_record($field_value);
+  }
 
+  return $query;
 }
 
 function zendesk_ticket_field_value_write_record($field_value) {
@@ -395,7 +438,7 @@ function zendesk_ticket_field_value_write_record($field_value) {
 }
 
 function zendesk_incremental_tickets_worker($item) {
-  $start_time = $item->data['start_time'];
+  $start_time = max($item->data['start_time'], time() - 300);
   $zd = zendesk_initialize_library();
   $url = '/incremental/tickets.json?start_time=' . $start_time;
   do {
@@ -413,7 +456,7 @@ function zendesk_incremental_tickets_worker($item) {
   $queue = DrupalQueue::get('zendesk_incremental_tickets');
 
   $item->data['start_time'] = $response->end_time;
-  $item->created += 600;
+  $item->created += variable_get('zendesk_incremental_ticket_refresh_timer', 60);
   // We requeue ourselves here with a +10 minute go-time and an updated
   // Zendesk increment time.
   $queue->requeueItem($item);
