@@ -374,7 +374,46 @@ function zendesk_cron() {
  * Write a Zendesk field definition to the database.
  */
 function zendesk_ticket_field_write_record($field_def) {
-  // @todo: This thing
+  // Convert values.
+  $schema = drupal_get_schema('zendesk_ticket_fields');
+
+  foreach ($schema['fields'] as $field => $info) {
+    // Skip the ID field, it does not need to be updated.
+    if ($field == 'id') {
+      continue;
+    }
+
+    if (!property_exists($field_def, $field)) {
+      // Skip fields that are missing for any reason.
+      continue;
+    }
+
+    // Build array of fields to update or insert.
+    if (empty($info['serialize'])) {
+      $fields[$field] = $field_def->$field;
+    }
+    else {
+      $fields[$field] = serialize($field_def->$field);
+    }
+
+    // Type cast to proper datatypes.
+    if (isset($field_def->$field) || !empty($info['not null'])) {
+      if ($info['type'] == 'int' || $info['type'] == 'serial') {
+        $fields[$field] = (int) $fields[$field];
+      }
+      elseif ($info['type'] == 'float') {
+        $fields[$field] = (float) $fields[$field];
+      }
+      else {
+        $fields[$field] = (string) $fields[$field];
+      }
+    }
+  }
+  // Assemble merge.
+  $query = db_merge('zendesk_ticket_fields')->fields($fields)->key(array('id' => $field_def->id))->execute();
+  if (!$query) {
+    throw Exception(t('Failed to insert Zendesk ticket field ID: ' . $field_def->id));
+  } // @todo: This thing
 }
 
 /**
@@ -385,7 +424,7 @@ function zendesk_ticket_write_record($ticket) {
   // Convert values.
   $schema = drupal_get_schema('zendesk_tickets');
 
-  foreach ($schema 'fields'] as $field => $info) {
+  foreach ($schema['fields'] as $field => $info) {
     // Skip the ticket ID field, it does not need to be updated.
     if ($field == 'id') {
       continue;
@@ -427,14 +466,53 @@ function zendesk_ticket_write_record($ticket) {
   foreach ($ticket->fields as $field_value) {
     $field_value->field_id = $field_value->id;
     $field_value->ticket_id = $ticket->id;
-    zendesk_ticket_field_value_write_record($field_value);
+    zendesk_ticket_field_value_write_record($field_value, $ticket);
   }
 
   return $query;
 }
 
-function zendesk_ticket_field_value_write_record($field_value) {
-  // @todo: This thing
+function zendesk_ticket_field_value_write_record($field_value, $ticket) {
+  // Convert values.
+  $schema = drupal_get_schema('zendesk_ticket_field_values');
+
+  foreach ($schema['fields'] as $field => $info) {
+    // Skip the ID fields, it does not need to be updated.
+    if ($field == 'id') {
+      continue;
+    }
+
+    if (!property_exists($field_value, $field)) {
+      // Skip fields that are missing for any reason.
+      continue;
+    }
+
+    // Build array of fields to update or insert.
+    if (empty($info['serialize'])) {
+      $fields[$field] = $field_value->$field;
+    }
+    else {
+      $fields[$field] = serialize($field_value->$field);
+    }
+
+    // Type cast to proper datatypes.
+    if (isset($field_value->$field) || !empty($info['not null'])) {
+      if ($info['type'] == 'int' || $info['type'] == 'serial') {
+        $fields[$field] = (int) $fields[$field];
+      }
+      elseif ($info['type'] == 'float') {
+        $fields[$field] = (float) $fields[$field];
+      }
+      else {
+        $fields[$field] = (string) $fields[$field];
+      }
+    }
+  }
+  // Assemble merge.
+  $query = db_merge('zendesk_ticket_field_values')->fields($fields)->key(array('field_id' => $field_value->id, 'ticket_id' => $ticket->id))->execute();
+  if (!$query) {
+    throw Exception(t('Failed to insert field value ' . $field_value->id . ' for Zendesk ticket ID: ' . $ticket->id));
+  }
 }
 
 function zendesk_incremental_tickets_worker($item) {
@@ -446,9 +524,10 @@ function zendesk_incremental_tickets_worker($item) {
 
     $count = $response->count;
     $url = str_replace($zd->base, '', $response->next_page);
-
-    foreach ($response->tickets as $ticket) {
-      zendesk_ticket_write_record($ticket);
+    if (is_array($response->tickets)) {
+      foreach ($response->tickets as $ticket) {
+        zendesk_ticket_write_record($ticket);
+      }
     }
 
   } while ($count >= 1000);

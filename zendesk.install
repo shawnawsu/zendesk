@@ -47,7 +47,7 @@ function zendesk_schema() {
         'not null' => TRUE,
         'serialize' => FALSE,
         'binary' => FALSE,
-        'default' => NULL,
+        'default' => '',
       ),
       'external_id' => array(
         'type' => 'int',
@@ -395,7 +395,7 @@ function zendesk_schema() {
         'not null' => TRUE,
         'serialize' => FALSE,
         'binary' => FALSE,
-        'default' => NULL,
+        'default' => '',
       ),
     ),
     'primary key' => array(
@@ -414,9 +414,9 @@ function zendesk_schema() {
  */
 function zendesk_update_7101(&$sandbox) {
   $schema = zendesk_schema();
-  db_add_table('zendesk_tickets', $schema['zendesk_tickets']);
-  db_add_table('zendesk_ticket_fields', $schema['zendesk_ticket_fields']);
-  db_add_table('zendesk_ticket_field_values', $schema['zendesk_ticket_field_values']);
+  db_create_table('zendesk_tickets', $schema['zendesk_tickets']);
+  db_create_table('zendesk_ticket_fields', $schema['zendesk_ticket_fields']);
+  db_create_table('zendesk_ticket_field_values', $schema['zendesk_ticket_field_values']);
 
   return "Added Zendesk tickets tables.";
 }
