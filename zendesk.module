@@ -353,7 +353,13 @@ function zendesk_advanced_queue_info() {
  */
 function zendesk_cron() {
   // @todo: Update ticket fields definition.
-
+  $zd = zendesk_initialize_library();
+  $response = $zd->call('/ticket_fields', '', 'GET');
+  if ($response) {
+    foreach ($response->ticket_fields as $tf) {
+      zendesk_ticket_field_write_record($tf);
+    }
+  }
   // Make sure that the ticket incremental worker is queued in some non-failed state.
   $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_incremental_tickets' AND status != 2;")->fetchColumn(0);
   if (!$result) {

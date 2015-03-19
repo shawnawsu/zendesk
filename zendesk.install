@@ -280,7 +280,7 @@ function zendesk_schema() {
       ),
       'regexp_for_validation' => array(
         'type' => 'varchar',
-        'length' => 0,
+        'length' => 255,
         'not null' => FALSE,
         'serialize' => FALSE,
         'binary' => FALSE,
@@ -288,7 +288,7 @@ function zendesk_schema() {
       ),
       'title_in_portal' => array(
         'type' => 'varchar',
-        'length' => 0,
+        'length' => 255,
         'not null' => FALSE,
         'serialize' => FALSE,
         'binary' => FALSE,
@@ -296,7 +296,7 @@ function zendesk_schema() {
       ),
       'raw_title_in_portal' => array(
         'type' => 'varchar',
-        'length' => 0,
+        'length' => 255,
         'not null' => FALSE,
         'serialize' => FALSE,
         'binary' => FALSE,
@@ -345,14 +345,14 @@ function zendesk_schema() {
       'system_field_options' => array(
         'type' => 'text',
         'size' => 'normal',
-        'not null' => TRUE,
+        'not null' => FALSE,
         'serialize' => TRUE,
         'binary' => FALSE,
       ),
       'custom_field_options' => array(
         'type' => 'text',
         'size' => 'normal',
-        'not null' => TRUE,
+        'not null' => FALSE,
         'serialize' => TRUE,
         'binary' => FALSE,
       ),
