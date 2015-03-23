@@ -342,7 +342,6 @@ function zendesk_advanced_queue_info() {
   $items['zendesk_incremental_tickets'] = array(
     'label' => t('Zendesk Incremental Tickets Pull'),
     'worker callback' => 'zendesk_incremental_tickets_worker',
-    'delete when completed' => FALSE, // What is dead may never die...
   );
 
   return $items;
@@ -522,12 +521,15 @@ function zendesk_ticket_field_value_write_record($field_value, $ticket) {
 }
 
 function zendesk_incremental_tickets_worker($item) {
-  $start_time = max($item->data['start_time'], time() - 300);
+  $start_time = min($item->data['start_time'], time() - 360);
   $zd = zendesk_initialize_library();
   $url = '/incremental/tickets.json?start_time=' . $start_time;
   do {
     $response = $zd->call($url, '', 'GET');
-
+    if (!is_object($response)) {
+      watchdog("zendesk", "Zendesk error response: @response", ["@response" => $response], WATCHDOG_WARNING);
+      break;
+    }
     $count = $response->count;
     $url = str_replace($zd->base, '', $response->next_page);
     if (is_array($response->tickets)) {
@@ -540,7 +542,7 @@ function zendesk_incremental_tickets_worker($item) {
 
   $queue = DrupalQueue::get('zendesk_incremental_tickets');
 
-  $item->data['start_time'] = $response->end_time;
+  $item->data['start_time'] = ($response ? $response->end_time : time());
   $item->created += variable_get('zendesk_incremental_ticket_refresh_timer', 60);
   // We requeue ourselves here with a +10 minute go-time and an updated
   // Zendesk increment time.
