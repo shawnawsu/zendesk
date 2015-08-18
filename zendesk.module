@@ -442,11 +442,11 @@ function zendesk_ticket_write_record($ticket) {
     }
 
     // Build array of fields to update or insert.
-    if (empty($info['serialize'])) {
-      $fields[$field] = $ticket->$field;
-    }
-    elseif ($field == 'created_at' || $field == 'updated_at') {
+    if ($field == 'created_at' || $field == 'updated_at') {
       $fields[$field] = strtotime($ticket->$field);
+    }
+    elseif (empty($info['serialize'])) {
+      $fields[$field] = $ticket->$field;
     }
     else {
       $fields[$field] = serialize($ticket->$field);
