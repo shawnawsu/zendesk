@@ -98,7 +98,7 @@ class zendesk
     curl_setopt($ch, CURLOPT_URL, $this->base.$url);
     curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_TIMEOUT, variable_get('zendesk_curl_timeout', 10));
 
     $output = curl_exec($ch);
     curl_close($ch);
