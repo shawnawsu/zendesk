@@ -101,6 +101,9 @@ class zendesk
     curl_setopt($ch, CURLOPT_TIMEOUT, variable_get('zendesk_curl_timeout', 10));
 
     $output = curl_exec($ch);
+    if ($output === FALSE) {
+      throw new Exception(curl_error($ch), curl_errno($ch));
+    }
     curl_close($ch);
     $decoded = json_decode($output);
 
