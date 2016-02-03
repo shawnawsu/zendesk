@@ -14,6 +14,7 @@ function zendesk_schema() {
     'fields' => array(
       'uid' => array(
         'type' => 'int',
+        'size' => 'big',
         'unsigned' => TRUE,
         'not null' => 0,
         'default' => 0,
@@ -21,6 +22,7 @@ function zendesk_schema() {
       ),
       'zid' => array(
         'type' => 'int',
+        'size' => 'big',
         'unsigned' => TRUE,
         'not null' => 0,
         'default' => 0,
@@ -420,6 +422,19 @@ function zendesk_update_7101(&$sandbox) {
 
   return "Added Zendesk tickets tables.";
 }
+
+/**
+ * Update the users table to use 64-bit ints.
+ */
+function zendesk_update_7102(&$sandbox) {
+  $schema = zendesk_schema();
+  db_change_field('zendesk_users', 'zid', 'zid', $schema['zendesk_users']['fields']['zid']);
+  db_change_field('zendesk_users', 'uid', 'uid', $schema['zendesk_users']['fields']['uid']);
+
+  return "Updated Zendesk users table.";
+}
+
+
 
 /**
  * Implements hook_uninstall().
