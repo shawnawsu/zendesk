@@ -39,7 +39,7 @@ function zendesk_schema() {
     'fields' => array(
       'id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => TRUE,
       ),
@@ -59,14 +59,14 @@ function zendesk_schema() {
       ),
       'created_at' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => TRUE,
         'default' => 0,
       ),
       'updated_at' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => TRUE,
         'default' => 0,
@@ -128,25 +128,25 @@ function zendesk_schema() {
       ),
       'submitter_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
       'assignee_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
       'organization_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
       'group_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
@@ -159,13 +159,13 @@ function zendesk_schema() {
       ),
       'forum_topic_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
       'problem_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
@@ -434,7 +434,28 @@ function zendesk_update_7102(&$sandbox) {
   return "Updated Zendesk users table.";
 }
 
+/**
+ * Update the tickets table to user 64-bit IDs and change collation to UTF8MB4
+ * in order to support emojis and other Unicode planes in ticket descriptions.
+ */
+function zendesk_upate_7103(&$sandbox) {
+  $schema = zendesk_schema();
+  // Change all of these fields.
+  db_change_field('zendesk_tickets', 'id', 'id', $schema['zendesk_tickets']['fields']['id']);
+  db_change_field('zendesk_tickets', 'created_at', 'created_at', $schema['zendesk_tickets']['fields']['created_at']);
+  db_change_field('zendesk_tickets', 'updated_at', 'updated_at', $schema['zendesk_tickets']['fields']['updated_at']);
+  db_change_field('zendesk_tickets', 'requester_id', 'requester_id', $schema['zendesk_tickets']['fields']['requester_id']);
+  db_change_field('zendesk_tickets', 'organization_id', 'organization_id', $schema['zendesk_tickets']['fields']['organization_id']);
+  db_change_field('zendesk_tickets', 'assignee_id', 'assignee_id', $schema['zendesk_tickets']['fields']['assignee_id']);
+  db_change_field('zendesk_tickets', 'group_id', 'group_id', $schema['zendesk_tickets']['fields']['group_i']);
+  db_change_field('zendesk_tickets', 'submitter_id', 'submitter_id', $schema['zendesk_tickets']['fields']['submitter_id']);
+  db_change_field('zendesk_tickets', 'forum_topic_id', 'forum_topic_id', $schema['zendesk_tickets']['fields']['forum_topic_id']);
+  db_change_field('zendesk_tickets', 'problem_id', 'problem_id', $schema['zendesk_tickets']['fields']['problem_i']);
+  // Now update the collation. Apparently we have to do this manually??
+  db_query("ALTER TABLE {zendesk_tickets} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;");
 
+  return "Updated integer field sizes and converted field collation to UTF8MB4.";
+}
 
 /**
  * Implements hook_uninstall().

@@ -539,7 +539,12 @@ function zendesk_incremental_tickets_worker($item) {
     $url = str_replace($zd->base, '', $response->next_page);
     if (is_array($response->tickets)) {
       foreach ($response->tickets as $ticket) {
-        zendesk_ticket_write_record($ticket);
+        try {
+          zendesk_ticket_write_record($ticket);
+        }
+        catch (Exception $e) {
+          advancedqueue_log_message(format_string('Invalid ticket exception for ticket ID @id: @message', ['@id' => $ticket->id, '@message' => $e->getMessage()]));
+        }
       }
     }
 
