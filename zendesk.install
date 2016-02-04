@@ -200,6 +200,8 @@ function zendesk_schema() {
         'type',
       ),
     ),
+    'mysql_character_set' => 'utf8mb4',
+    'collation' => 'utf8mb4_general_ci',
   );
 
   $schema['zendesk_ticket_fields'] = array(

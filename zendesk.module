@@ -342,7 +342,7 @@ function zendesk_advanced_queue_info() {
   $items['zendesk_incremental_tickets'] = array(
     'label' => t('Zendesk Incremental Tickets Pull'),
     'worker callback' => 'zendesk_incremental_tickets_worker',
-    'delete when completed' => FALSE,
+    'delete when completed' => TRUE,
   );
 
   return $items;
@@ -554,6 +554,9 @@ function zendesk_incremental_tickets_worker($item) {
 
   $item->data['start_time'] = ($response ? $response->end_time : time());
   $item->created = time() + variable_get('zendesk_incremental_ticket_refresh_timer', 600);
+  // We tell the queue processor to not delete this item normally since we are
+  // requeueing it. This causes the success to not be logged.
+  $item->skip_deletion = TRUE;
   // We requeue ourselves here with a +10 minute go-time and an updated
   // Zendesk increment time.
   $queue->requeueItem($item);
