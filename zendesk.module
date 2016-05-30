@@ -200,11 +200,14 @@ function zendesk_sync_user_back($account) {
   $zd = zendesk_initialize_library();
   $result = $zd->call('/users/search.json?query=' . $account->mail, '', 'GET');
   if (isset($result->users[0]->id)) {
-    db_insert('zendesk_users')
+    db_merge('zendesk_users')
        ->fields(array(
          'uid' => $account->uid,
          'zid' => $result->users[0]->id,
        ))
+       // On the off-chance that something is wrong and the user has a Zendesk
+       // ID already, update it.
+       ->key(array('uid' => $account->uid))
        ->execute();
     return $result->users[0]->id;
   }
