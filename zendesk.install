@@ -53,7 +53,7 @@ function zendesk_schema() {
       ),
       'external_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
@@ -73,7 +73,7 @@ function zendesk_schema() {
       ),
       'type' => array(
         'type' => 'varchar',
-        'length' => 255,
+        'length' => 191,
         'not null' => TRUE,
         'serialize' => FALSE,
         'binary' => FALSE,
@@ -122,7 +122,7 @@ function zendesk_schema() {
       ),
       'requester_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => FALSE,
       ),
@@ -208,7 +208,7 @@ function zendesk_schema() {
     'fields' => array(
       'id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => TRUE,
       ),
@@ -288,7 +288,6 @@ function zendesk_schema() {
         'not null' => FALSE,
         'serialize' => FALSE,
         'binary' => FALSE,
-        'default' => NULL,
       ),
       'title_in_portal' => array(
         'type' => 'varchar',
@@ -296,7 +295,6 @@ function zendesk_schema() {
         'not null' => FALSE,
         'serialize' => FALSE,
         'binary' => FALSE,
-        'default' => NULL,
       ),
       'raw_title_in_portal' => array(
         'type' => 'varchar',
@@ -304,7 +302,6 @@ function zendesk_schema() {
         'not null' => FALSE,
         'serialize' => FALSE,
         'binary' => FALSE,
-        'default' => NULL,
       ),
       'visible_in_portal' => array(
         'type' => 'int',
@@ -383,13 +380,13 @@ function zendesk_schema() {
     'fields' => array(
       'ticket_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => TRUE,
       ),
       'field_id' => array(
         'type' => 'int',
-        'size' => 'normal',
+        'size' => 'big',
         'unsigned' => FALSE,
         'not null' => TRUE,
       ),
@@ -440,7 +437,7 @@ function zendesk_update_7102(&$sandbox) {
  * Update the tickets table to user 64-bit IDs and change collation to UTF8MB4
  * in order to support emojis and other Unicode planes in ticket descriptions.
  */
-function zendesk_upate_7103(&$sandbox) {
+function zendesk_update_7103(&$sandbox) {
   $schema = zendesk_schema();
   // Change all of these fields.
   db_change_field('zendesk_tickets', 'id', 'id', $schema['zendesk_tickets']['fields']['id']);
@@ -449,10 +446,17 @@ function zendesk_upate_7103(&$sandbox) {
   db_change_field('zendesk_tickets', 'requester_id', 'requester_id', $schema['zendesk_tickets']['fields']['requester_id']);
   db_change_field('zendesk_tickets', 'organization_id', 'organization_id', $schema['zendesk_tickets']['fields']['organization_id']);
   db_change_field('zendesk_tickets', 'assignee_id', 'assignee_id', $schema['zendesk_tickets']['fields']['assignee_id']);
-  db_change_field('zendesk_tickets', 'group_id', 'group_id', $schema['zendesk_tickets']['fields']['group_i']);
+  db_change_field('zendesk_tickets', 'group_id', 'group_id', $schema['zendesk_tickets']['fields']['group_id']);
   db_change_field('zendesk_tickets', 'submitter_id', 'submitter_id', $schema['zendesk_tickets']['fields']['submitter_id']);
   db_change_field('zendesk_tickets', 'forum_topic_id', 'forum_topic_id', $schema['zendesk_tickets']['fields']['forum_topic_id']);
-  db_change_field('zendesk_tickets', 'problem_id', 'problem_id', $schema['zendesk_tickets']['fields']['problem_i']);
+  db_change_field('zendesk_tickets', 'problem_id', 'problem_id', $schema['zendesk_tickets']['fields']['problem_id']);
+  db_change_field('zendesk_tickets', 'type', 'type', $schema['zendesk_tickets']['fields']['type']);
+
+  db_change_field('zendesk_ticket_fields', 'id', 'id', $schema['zendesk_ticket_fields']['fields']['id']);
+
+  db_change_field('zendesk_ticket_field_values', 'field_id', 'field_id', $schema['zendesk_ticket_field_values']['fields']['field_id']);
+  db_change_field('zendesk_ticket_field_values', 'ticket_id', 'ticket_id', $schema['zendesk_ticket_field_values']['fields']['ticket_id']);
+
   // Now update the collation. Apparently we have to do this manually??
   db_query("ALTER TABLE {zendesk_tickets} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;");
 
