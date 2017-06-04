@@ -528,6 +528,8 @@ function zendesk_ticket_field_value_write_record($field_value, $ticket) {
 }
 
 function zendesk_incremental_tickets_worker($item) {
+  $success_count = 0;
+  $failure_count = 0;
   // If our worker doesn't have a start time, we have to start at the beginning
   // of time. The worker usually records its own new start time, but if not we
   // also allow a global state variable as a backup.
@@ -542,6 +544,7 @@ function zendesk_incremental_tickets_worker($item) {
       break;
     }
     $count = $response->count;
+    $success_count += $count;
     $url = str_replace($zd->base, '', $response->next_page);
     if (is_array($response->tickets)) {
       foreach ($response->tickets as $ticket) {
@@ -549,6 +552,8 @@ function zendesk_incremental_tickets_worker($item) {
           zendesk_ticket_write_record($ticket);
         }
         catch (Exception $e) {
+          $failure_count++;
+          $success_count--;
           advancedqueue_log_message(format_string('Invalid ticket exception for ticket ID @id: @message', ['@id' => $ticket->id, '@message' => $e->getMessage()]));
         }
       }
@@ -570,6 +575,15 @@ function zendesk_incremental_tickets_worker($item) {
   // Zendesk increment time.
   $queue->requeueItem($item);
 
+  $params = [
+    '@success' => $success_count,
+    '@failure' => $failure_count,
+  ];
+
+  return [
+    'status' => ADVANCEDQUEUE_STATUS_SUCCESS,
+    'result' => format_string("Successfully finished incremental ticket processing run. Logged @success tickets updated successfully and @failure failures.", $params),
+  ];
 }
 
 
