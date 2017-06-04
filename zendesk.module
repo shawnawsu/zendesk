@@ -528,8 +528,11 @@ function zendesk_ticket_field_value_write_record($field_value, $ticket) {
 }
 
 function zendesk_incremental_tickets_worker($item) {
-  // If our worker doesn't have a start time, we start at The Beginning.
+  // If our worker doesn't have a start time, we have to start at the beginning
+  // of time. The worker usually records its own new start time, but if not we
+  // also allow a global state variable as a backup.
   $start_time = (!empty($item->data['start_time']) ? $item->data['start_time'] : 0);
+  $start_time = $start_time ?: variable_get('zendesk_last_incremental_pull', 0);
   $zd = zendesk_initialize_library();
   $url = '/incremental/tickets.json?start_time=' . $start_time;
   do {
@@ -556,6 +559,9 @@ function zendesk_incremental_tickets_worker($item) {
   $queue = DrupalQueue::get('zendesk_incremental_tickets');
 
   $item->data['start_time'] = ($response ? $response->end_time : time());
+  // We want to let the queue item do this, but failures causing a full re-run sucks.
+  variable_set('zendesk_incremental_ticket_last_time', $item->data['start_time']);
+
   $item->created = time() + variable_get('zendesk_incremental_ticket_refresh_timer', 600);
   // We tell the queue processor to not delete this item normally since we are
   // requeueing it. This causes the success to not be logged.
