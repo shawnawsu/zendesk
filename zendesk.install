@@ -187,7 +187,7 @@ function zendesk_schema() {
         'type' => 'text',
         'size' => 'normal',
         'not null' => FALSE,
-        'serialize' => FALSE,
+        'serialize' => TRUE,
         'binary' => FALSE,
       ),
     ),
