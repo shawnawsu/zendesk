@@ -563,7 +563,7 @@ function zendesk_incremental_tickets_worker($item) {
 
   $queue = DrupalQueue::get('zendesk_incremental_tickets');
 
-  $item->data['start_time'] = ($response ? $response->end_time : time());
+  $item->data['start_time'] = (!empty($response->end_time) ? $response->end_time : time());
   // We want to let the queue item do this, but failures causing a full re-run sucks.
   variable_set('zendesk_incremental_ticket_last_time', $item->data['start_time']);
 
