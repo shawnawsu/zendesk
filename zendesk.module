@@ -421,7 +421,7 @@ function zendesk_ticket_field_write_record($field_def) {
   // Assemble merge.
   $query = db_merge('zendesk_ticket_fields')->fields($fields)->key(array('id' => $field_def->id))->execute();
   if (!$query) {
-    throw Exception(t('Failed to insert Zendesk ticket field ID: ' . $field_def->id));
+    throw new Exception(t('Failed to insert Zendesk ticket field ID: ' . $field_def->id));
   } // @todo: This thing
 }
 
@@ -471,7 +471,7 @@ function zendesk_ticket_write_record($ticket) {
   // Assemble merge.
   $query = db_merge('zendesk_tickets')->fields($fields)->key(array('id' => $ticket->id))->execute();
   if (!$query) {
-    throw Exception(t('Failed to insert Zendesk ticket ID: ' . $ticket->id));
+    throw new Exception(t('Failed to insert Zendesk ticket ID: ' . $ticket->id));
   }
 
   // Write custom field values.
@@ -523,7 +523,7 @@ function zendesk_ticket_field_value_write_record($field_value, $ticket) {
   // Assemble merge.
   $query = db_merge('zendesk_ticket_field_values')->fields($fields)->key(array('field_id' => $field_value->id, 'ticket_id' => $ticket->id))->execute();
   if (!$query) {
-    throw Exception(t('Failed to insert field value ' . $field_value->id . ' for Zendesk ticket ID: ' . $ticket->id));
+    throw new Exception(t('Failed to insert field value ' . $field_value->id . ' for Zendesk ticket ID: ' . $ticket->id));
   }
 }
 
@@ -563,7 +563,7 @@ function zendesk_incremental_tickets_worker($item) {
 
   $queue = DrupalQueue::get('zendesk_incremental_tickets');
 
-  $item->data['start_time'] = ($response ? $response->end_time : time());
+  $item->data['start_time'] = (!empty($response->end_time) ? $response->end_time : time());
   // We want to let the queue item do this, but failures causing a full re-run sucks.
   variable_set('zendesk_incremental_ticket_last_time', $item->data['start_time']);
 
