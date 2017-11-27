@@ -46,6 +46,13 @@ function zendesk_menu() {
 }
 
 /**
+ * Implements hook_views_api().
+ */
+function zendesk_views_api($module = NULL, $api = NULL) {
+  return array("api" => "3.0");
+}
+
+/**
  * Initialization of the zendesk library.
  */
 function zendesk_initialize_library() {

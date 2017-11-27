@@ -5,3 +5,5 @@ package = Zendesk
 configure = admin/config/people/zendesk
 
 files[] = zendesk.lib.php
+files[] = includes/views_handler_relationship_link_reverse.inc
+
