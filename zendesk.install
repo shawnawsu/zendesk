@@ -29,7 +29,7 @@ function zendesk_schema() {
         'description' => 'Zendesk user id',
       ),
     ),
-    'primary_key' => array('uid', 'zid'),
+    'primary key' => array('uid', 'zid'),
     'indexes' => array(
       'uid' => array('uid'),
     ),
@@ -461,6 +461,21 @@ function zendesk_update_7103(&$sandbox) {
   db_query("ALTER TABLE {zendesk_tickets} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;");
 
   return "Updated integer field sizes and converted field collation to UTF8MB4.";
+}
+
+/**
+ * Add a primary key to the zendesk_users table, after deduplicating.
+ */
+function zendesk_update_7104() {
+  $result = db_query('SELECT uid, zid, COUNT(*) AS c FROM {zendesk_users} GROUP BY uid, zid HAVING c > 1');
+  while ($row = $result->fetchAssoc()) {
+    db_query('DELETE FROM {zendesk_users} WHERE uid = :uid AND zid = :zid LIMIT :limit', array(
+      ':uid' => $row['uid'],
+      ':zid' => $row['zid'],
+      ':limit' => $row['c'] - 1,
+    ));
+  }
+  db_add_primary_key('zendesk_users', array('uid', 'zid'));
 }
 
 /**
