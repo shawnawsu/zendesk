@@ -470,15 +470,18 @@ function zendesk_update_7104() {
   // Remove duplicate (uid, zid) rows.
   $result = db_query('SELECT uid, zid, COUNT(*) AS c FROM {zendesk_users} GROUP BY uid, zid HAVING c > 1');
   while ($row = $result->fetchAssoc()) {
-    // Using standard db_query() replacements here results in a syntax error.
-    // The keys are all cast to integers instead.
-    db_query(sprintf(
-      'DELETE FROM {zendesk_users} WHERE uid = %d AND zid = %d LIMIT %d',
-      $row['uid'],
-      $row['zid'],
-      $row['c'] - 1
-    ));
+    // We cannot identify the duplicate rows, we can only delete all rows. This
+    // table is merely a cache, so theoretically no data should be lost.
+    db_delete('zendesk_users')
+      ->condition('uid', $row['uid'])
+      ->condition('zid', $row['zid'])
+      ->execute();
   }
+
+  // Remove rows where one of the fields is null.
+  db_delete('zendesk_users')
+    ->condition(db_or()->isNull('uid')->isNull('zid'))
+    ->execute();
 
   // Add the primary key.
   db_add_primary_key('zendesk_users', array('uid', 'zid'));
