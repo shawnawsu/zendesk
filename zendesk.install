@@ -407,6 +407,76 @@ function zendesk_schema() {
     'indexes' => array(),
   );
 
+  $schema['zendesk_ticket_metric_events'] = array(
+    'fields' => array(
+      'id' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'ticket_id' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'metric' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+        'default' => '',
+      ),
+      'instance_id' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+        'default' => '',
+      ),
+      'time' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'sla' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => TRUE,
+        'binary' => FALSE,
+      ),
+      'status' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'serialize' => TRUE,
+        'binary' => FALSE,
+      ),
+      'deleted' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array(
+      'id',
+    ),
+    'unique keys' => array(),
+    'indexes' => array(),
+  );
   return $schema;
 }
 
@@ -462,6 +532,18 @@ function zendesk_update_7103(&$sandbox) {
 
   return "Updated integer field sizes and converted field collation to UTF8MB4.";
 }
+
+// @TODO: For later.
+// /**
+//  * Add ticket comment and ticket metric event tables.
+//  */
+// function zendesk_update_7104(&$sandbox) {
+//   $schema = zendesk_schema();
+//   db_create_table('zendesk_ticket_comments', $schema['zendesk_ticket_comments']);
+//   db_create_table('zendesk_ticket_metric_events', $schema['zendesk_ticket_metric_events']);
+//
+//   return "Created ticket comment and metric events tables.";
+// }
 
 /**
  * Implements hook_uninstall().

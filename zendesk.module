@@ -22,6 +22,77 @@ function zendesk_permission() {
 }
 
 /**
+ * Implements hook_entity_info().
+ *
+ * Used to give us a basic load/filter controller for tickets and ticket field definitions.
+ */
+function zendesk_entity_info() {
+  $info['zendesk_ticket'] = [
+    'controller class' => 'DrupalDefaultEntityController',
+    'base table' => 'zendesk_tickets',
+    'label' => t('Zendesk ticket'),
+    'entity keys' => [
+      'id' => 'id',
+      'label' => 'title',
+    ],
+  ];
+
+  $info['zendesk_ticket_field'] = [
+    'controller class' => 'DrupalDefaultEntityController',
+    'base table' => 'zendesk_ticket_fields',
+    'label' => t('Zendesk ticket field'),
+    'entity keys' => [
+      'id' => 'id',
+      'label' => 'title',
+    ],
+  ];
+
+  return $info;
+}
+
+/**
+ * Implements zendesk_ticket_field_load().
+ */
+function zendesk_zendesk_ticket_field_load($ticket_fields) {
+  $schema = drupal_get_schema('zendesk_ticket_fields');
+  foreach ($schema['fields'] as $name => $info) {
+    if (!empty($info['serialize'])) {
+      $unserialize[] = $name;
+    }
+  }
+
+  foreach ($ticket_fields as $field) {
+    foreach ($unserialize as $property) {
+      if (!empty($field->{$property})) {
+        $field->{$property . "_raw"} = $field->{$property};
+        $field->{$property} = unserialize($field->{$property});
+      }
+    }
+  }
+}
+
+/**
+ * Implements zendesk_ticket_load().
+ */
+function zendesk_zendesk_ticket_load($tickets) {
+  $schema = drupal_get_schema('zendesk_tickets');
+  foreach ($schema['fields'] as $name => $info) {
+    if (!empty($info['serialize'])) {
+      $unserialize[] = $name;
+    }
+  }
+
+  foreach ($tickets as $ticket) {
+    foreach ($unserialize as $property) {
+      if (!empty($ticket->{$property})) {
+        $ticket->{$property . "_raw"} = $ticket->{$property};
+        $ticket->{$property} = unserialize($ticket->{$property});
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function zendesk_menu() {
@@ -43,6 +114,13 @@ function zendesk_menu() {
     'file' => 'zendesk.admin.inc',
   );
   return $items;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function zendesk_views_api($module = NULL, $api = NULL) {
+  return array("api" => "3.0");
 }
 
 /**
@@ -525,6 +603,83 @@ function zendesk_ticket_field_value_write_record($field_value, $ticket) {
   if (!$query) {
     throw new Exception(t('Failed to insert field value ' . $field_value->id . ' for Zendesk ticket ID: ' . $ticket->id));
   }
+}
+
+/**
+ * Get the options from a dropdown field added on zendesk.
+ *
+ * @param int $field_id
+ *   The field ID taken from zendesk.
+ *
+ * @return array|bool
+ */
+function zendesk_get_options_from_field($field_id) {
+  if (empty($field_id)) {
+    return FALSE;
+  }
+
+  // Try to load the field from the database.
+  $field_def = entity_object_load($field_id, 'zendesk_ticket_field');
+
+  if (!$field_def) {
+    // Not in the DB for some reason. Find it.
+    $zd = zendesk_initialize_library();
+    $data = $zd->call('/ticket_fields/' . $field_id, '', 'GET');
+    $options = array();
+    if (!empty($data->ticket_field)) {
+      // Yay, the API has it. Save it as if it had come in on cron.
+      $field_def = $data->ticket_field;
+      zendesk_ticket_field_write_record($field_def);
+    }
+  }
+
+  $options = [];
+  if ($field_def) {
+    if (!empty($field_def->custom_field_options)) {
+      foreach ($field_def->custom_field_options as $field_option) {
+        $options[$field_option->value] = $field_option->name;
+      }
+    }
+    else {
+      foreach ($field_def->system_field_options as $field_option) {
+        $options[$field_option->value] = $field_option->name;
+      }
+    }
+  }
+
+  return $options;
+}
+
+/**
+ * Options callback for the priority field.
+ *
+ * @return string[string]
+ */
+function zendesk_ticket_priority_options() {
+  return [
+    '' => t('None'),
+    'low' => t('Low'),
+    'normal' => t('Normal'),
+    'high' => t('High'),
+    'urgent' => t('Urgent'),
+  ];
+}
+
+/**
+ * Options callback for the status field.
+ *
+ * @return string[string]
+ */
+function zendesk_ticket_status_options() {
+  return [
+    'deleted' => t('Deleted'),
+    'closed' => t('Closed'),
+    'hold' => t('On Hold'),
+    'pending' => t('Pending'),
+    'open' => t('Open'),
+    'solved' => t('Solved'),
+    'new' => t('New'),
+  ];
 }
 
 function zendesk_incremental_tickets_worker($item) {
