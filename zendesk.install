@@ -29,7 +29,7 @@ function zendesk_schema() {
         'description' => 'Zendesk user id',
       ),
     ),
-    'primary_key' => array('uid', 'zid'),
+    'primary key' => array('uid', 'zid'),
     'indexes' => array(
       'uid' => array('uid'),
     ),
@@ -544,6 +544,30 @@ function zendesk_update_7103(&$sandbox) {
 //
 //   return "Created ticket comment and metric events tables.";
 // }
+
+/**
+ * Add a primary key to the zendesk_users table, after deduplicating.
+ */
+function zendesk_update_7104() {
+  // Remove duplicate (uid, zid) rows.
+  $result = db_query('SELECT uid, zid, COUNT(*) AS c FROM {zendesk_users} GROUP BY uid, zid HAVING c > 1');
+  while ($row = $result->fetchAssoc()) {
+    // We cannot identify the duplicate rows, we can only delete all rows. This
+    // table is merely a cache, so theoretically no data should be lost.
+    db_delete('zendesk_users')
+      ->condition('uid', $row['uid'])
+      ->condition('zid', $row['zid'])
+      ->execute();
+  }
+
+  // Remove rows where one of the fields is null.
+  db_delete('zendesk_users')
+    ->condition(db_or()->isNull('uid')->isNull('zid'))
+    ->execute();
+
+  // Add the primary key.
+  db_add_primary_key('zendesk_users', array('uid', 'zid'));
+}
 
 /**
  * Implements hook_uninstall().
