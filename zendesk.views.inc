@@ -26,6 +26,20 @@ function zendesk_views_data() {
         'handler' => 'views_handler_argument_string',
       ),
     ),
+    'subject' => array(
+      'title' => t('Subject'),
+      'help' => t('The ticket subject line.'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_string',
+      ),
+    ),
     'url' => array(
       'title' => t('Ticket URL'),
       'help' => t('The URL to view this ticket on Zendesk.'),
