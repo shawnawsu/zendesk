@@ -685,11 +685,8 @@ function zendesk_ticket_status_options() {
 function zendesk_incremental_tickets_worker($item) {
   $success_count = 0;
   $failure_count = 0;
-  // If our worker doesn't have a start time, we have to start at the beginning
-  // of time. The worker usually records its own new start time, but if not we
-  // also allow a global state variable as a backup.
   $start_time = (!empty($item->data['start_time']) ? $item->data['start_time'] : 0);
-  $start_time = $start_time ?: variable_get('zendesk_last_incremental_pull', 0);
+  $start_time = $start_time ?: _zendesk_start_time();
   $zd = zendesk_initialize_library();
   $url = '/incremental/tickets.json?start_time=' . $start_time;
   do {
@@ -744,3 +741,19 @@ function zendesk_incremental_tickets_worker($item) {
   return ADVANCEDQUEUE_STATUS_SUCCESS;
 }
 
+
+/**
+ * If our worker doesn't have a start time, we will sync all tickets created after the last ticket's creation.
+ * And only if this fails for any reason whatsoever, we will fallback to the zendesk_last_incremental_pull
+ * variable.
+ *
+ * @return int
+ */
+function _zendesk_start_time() {
+  try {
+    return db_query("SELECT created_at FROM {zendesk_tickets} WHERE 1 ORDER BY id DESC LIMIT 0,1;")->fetchColumn(0) + 1;
+  }
+  catch (Exception $e) {
+    return variable_get('zendesk_last_incremental_pull', 0);
+  }
+}
