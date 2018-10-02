@@ -477,6 +477,50 @@ function zendesk_schema() {
     'unique keys' => array(),
     'indexes' => array(),
   );
+
+  $schema['zendesk_jira_links'] = array(
+    'fields' => array(
+      'id' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'ticket_id' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'issue_id' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'issue_key' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'created_at' => array(
+        'type' => 'int',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'updated_at' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array(
+      'id',
+    ),
+    'unique keys' => array(),
+    'indexes' => array(),
+  );
+
   return $schema;
 }
 
@@ -567,6 +611,16 @@ function zendesk_update_7104() {
 
   // Add the primary key.
   db_add_primary_key('zendesk_users', array('uid', 'zid'));
+}
+
+/**
+ * Add the Zendesk/JIRA Links table.
+ */
+function zendesk_update_7105() {
+  $schema = zendesk_schema();
+  db_create_table('zendesk_jira_links', $schema['zendesk_jira_links']);
+
+  return "Created Zendesk/JIRA links table.";
 }
 
 /**
