@@ -426,6 +426,12 @@ function zendesk_advanced_queue_info() {
     'delete when completed' => TRUE,
   );
 
+  $items['zendesk_jira_links'] = array(
+    'label' => t('Zendesk Jira Links Pull'),
+    'worker callback' => 'zendesk_jira_links_worker',
+    'delete when completed' => TRUE,
+  );
+
   return $items;
 }
 
@@ -454,6 +460,19 @@ function zendesk_cron() {
 
     $queue = DrupalQueue::get('zendesk_incremental_tickets');
     $queue->createItem($data);
+  }
+
+  // Make sure that the links worker is queued in some non-failed state.
+  if (variable_get('zendesk_jira_links_active', FALSE)) {
+    $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_jira_links' AND status != 2;")->fetchColumn(0);
+    if (!$result) {
+      $data = array(
+        'title' => t('Zendesk/Jira links pull'),
+      );
+
+      $queue = DrupalQueue::get('zendesk_jira_links');
+      $queue->createItem($data);
+    }
   }
 }
 
@@ -756,4 +775,31 @@ function _zendesk_start_time() {
   catch (Exception $e) {
     return variable_get('zendesk_last_incremental_pull', 0);
   }
+}
+
+/**
+ * Pull in new Jira links.
+ */
+function zendesk_jira_links_worker($item) {
+  $latest_link = db_query("SELECT MAX(id) FROM zendesk_jira_links;")->fetchColumn() ?: 0;
+  $zd = zendesk_initialize_library();
+  $zd->base = substr($zd->base, 0, -3);
+
+  do {
+    $response = $zd->call("/services/jira/links.json?since_id=$latest_link", "", "GET");
+    foreach ($response->links as $l) {
+      drupal_write_record('zendesk_jira_links', $l);
+      $latest_link = max($latest_link, $l->id);
+    }
+  } while ($response->total > count($response->links));
+
+  $queue = DrupalQueue::get('zendesk_jira_links');
+  $item->created = time() + variable_get('zendesk_incremental_ticket_refresh_timer', 600);
+  // We tell the queue processor to not delete this item normally since we are
+  // requeueing it. This causes the success to not be logged.
+  $item->skip_deletion = TRUE;
+  // We requeue ourselves here with a +10 minute go-time.
+  $queue->requeueItem($item);
+
+  return ADVANCEDQUEUE_STATUS_SUCCESS;
 }
