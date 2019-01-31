@@ -788,6 +788,8 @@ function zendesk_jira_links_worker($item) {
   do {
     $response = $zd->call("/services/jira/links.json?since_id=$latest_link", "", "GET");
     foreach ($response->links as $l) {
+      $l->created_at = strtotime($l->created_at);
+      $l->updated_at = strtotime($l->updated_at);
       drupal_write_record('zendesk_jira_links', $l);
       $latest_link = max($latest_link, $l->id);
     }
