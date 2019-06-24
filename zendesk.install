@@ -628,6 +628,9 @@ function zendesk_update_7105() {
  */
 function zendesk_update_7106() {
   $schema = zendesk_schema();
+
+  db_query("UPDATE {zendesk_jira_links} SET updated_at = UNIX_TIMESTAMP(LEFT(REPLACE(updated_at, 'T', ' '), 19)), created_at = updated_at WHERE updated_at NOT REGEXP '^[0-9]+$'")->execute();
+
   db_change_field('zendesk_jira_links', 'updated_at', 'updated_at', $schema['zendesk_jira_links']['fields']['updated_at']);
   db_change_field('zendesk_jira_links', 'created_at', 'created_at', $schema['zendesk_jira_links']['fields']['created_at']);
   return "Fixed timestamp columns in Jira links table.";
