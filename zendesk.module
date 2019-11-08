@@ -468,6 +468,21 @@ function zendesk_cron() {
     $queue->createItem($data);
   }
 
+  // Make sure that the ticket incremental worker is queued in some non-failed state.
+  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_incremental_ticket_comments' AND status != 2;")->fetchColumn(0);
+  if (!$result) {
+    $last_success = db_query("SELECT * FROM advancedqueue WHERE name = 'zendesk_incremental_ticket_comments' AND status = 1 ORDER BY item_id DESC;")->fetchObject();
+    $start_time = ($last_success ? unserialize($last_success->data)['start_time'] : 0);
+
+    $data = array(
+      'title' => t('Zendesk incremental ticket comments pull'),
+      'start_time' => $start_time,
+    );
+
+    $queue = DrupalQueue::get('zendesk_incremental_ticket_comments');
+    $queue->createItem($data);
+  }
+
   // Make sure that the links worker is queued in some non-failed state.
   if (variable_get('zendesk_jira_links_active', FALSE)) {
     $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_jira_links' AND status != 2;")->fetchColumn(0);
