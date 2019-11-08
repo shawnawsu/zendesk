@@ -521,6 +521,73 @@ function zendesk_schema() {
     'indexes' => array(),
   );
 
+  $schema['zendesk_comments'] = [
+    'description' => 'The table for zendesk comments.',
+    'fields' => [
+      'comment_id' => [
+        'description' => 'Zendesk specific id for the comment',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'ticket_id' => [
+        'description' => 'The id of the ticket this comment is related to.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'body' => [
+        'description' => 'The comment body',
+        'type' => 'blob',
+        'size' => 'big',
+        'not null' => FALSE,
+      ],
+      'author_id' => [
+        'description' => 'The users.uid of the comment author',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'created_at' => [
+        'description' => 'The Unix timestamp when the comment was created.',
+        'type' => 'int',
+        'size' => 'big',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'public' => [
+        'description' => 'Comments may be private or public we need this for filtering out private comments for non administrators',
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => FALSE,
+      ],
+      'attachments' => [
+        'description' => 'If there are attachments we need to handle them seperately.',
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => FALSE,
+      ],
+    ],
+    'primary key' => ['comment_id'],
+    'indexes' => [
+      'ticket_id' => ['ticket_id'],
+      'comment_id' => ['comment_id'],
+    ],
+    'foreign keys' => [
+      'ticket_id' => [
+        'table' => 'zendesk_tickets',
+        'columns' => ['id' => 'id'],
+      ],
+      'author_id' => [
+        'table' => 'users',
+        'columns' => ['uid' => 'uid'],
+      ],
+    ],
+  ];
+
   return $schema;
 }
 
@@ -635,6 +702,16 @@ function zendesk_update_7106() {
   db_change_field('zendesk_jira_links', 'created_at', 'created_at', $schema['zendesk_jira_links']['fields']['created_at']);
   return "Fixed timestamp columns in Jira links table.";
 }
+
+/**
+ * 
+ */
+function zendesk_update_7007() {
+  $schema = blimp_zendesk_schema();
+  db_create_table('zendesk_comments', $schema['zendesk_comments']);
+  return "Created Zendesk Comments table.";
+}
+
 
 /**
  * Implements hook_uninstall().

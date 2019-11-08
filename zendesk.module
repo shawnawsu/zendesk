@@ -432,6 +432,12 @@ function zendesk_advanced_queue_info() {
     'delete when completed' => TRUE,
   );
 
+  $items['zendesk_incremental_ticket_comments'] = array(
+    'label' => t('Zendesk Incremental Ticket Comments Pull'),
+    'worker callback' => 'zendesk_incremental_ticket_comment_worker',
+    'delete when completed' => TRUE,
+  );
+
   return $items;
 }
 
@@ -760,6 +766,87 @@ function zendesk_incremental_tickets_worker($item) {
   return ADVANCEDQUEUE_STATUS_SUCCESS;
 }
 
+function zendesk_incremental_ticket_comment_worker($item) {
+  $success_count = 0;
+  $failure_count = 0;
+  $start_time = (!empty($item->data['start_time']) ? $item->data['start_time'] : 0);
+  $start_time = $start_time ?: _zendesk_comment_start_time();
+
+  $zd = zendesk_initialize_library();
+  $url = '/incremental/ticket_events.json?start_time=' . $start_time . "&include=comment_events";
+  do {
+    $response = $zd->call($url, '', 'GET');
+    if (!is_object($response)) {
+      break;
+    }
+    $count = $response->count;
+    $success_count += $count;
+    $url = str_replace($zd->base, '', $response->next_page);
+    if (is_array($response->ticket_events)) {
+      foreach ($response->ticket_events as $ticket) {
+        $data = [];
+        $data['ticket_id'] = $ticket->ticket_id;
+        foreach ($ticket->child_events as $event) {
+          if ($event->event_type == "Comment") {
+            foreach ($event as $key => $info) {
+              if ($key == 'created_at') {
+                $data[$key] = strtotime($info);
+              }
+              else if ($key == 'attachments') {
+                if (!empty($info)) {
+                  $data['attachments'] = 1;
+                }
+                else {
+                  $data['attachments'] = 0;
+                }
+              }
+              else {
+                $data[$key] = $info;
+              }
+            }
+            try {
+              zendesk_create_comment($data);
+            }
+            catch (Exception $e) {
+              $failure_count++;
+              $success_count--;
+              advancedqueue_log_message(format_string('Invalid ticket exception for ticket ID @id: @message', ['@id' => $ticket->id, '@message' => $e->getMessage()]));
+            }
+          }
+        }
+      }
+    }
+
+  } while ($count >= 1000);
+
+  $queue = DrupalQueue::get('zendesk_incremental_ticket_comments');
+
+  $item->data['start_time'] = (!empty($response->end_time) ? $response->end_time : time());
+  // We want to let the queue item do this, but failures causing a full re-run sucks.
+  variable_set('zendesk_incremental_ticket_comment_last_time', $item->data['start_time']);
+
+  $item->created = time() + variable_get('zendesk_incremental_ticket_comment_refresh_timer', 600);
+  // We tell the queue processor to not delete this item normally since we are
+  // requeueing it. This causes the success to not be logged.
+  $item->skip_deletion = TRUE;
+  // We requeue ourselves here with a +10 minute go-time and an updated
+  // Zendesk increment time.
+  $queue->requeueItem($item);
+
+  $params = [
+    '@success' => $success_count,
+    '@failure' => $failure_count,
+  ];
+
+  // We log a message here because the normal operations won't record a message
+  // like this on the item status due to our requeueing shenanigans.
+  advancedqueue_log_message(format_string("Successfully finished incremental ticket processing run. Logged @success tickets updated successfully and @failure failures.", $params));
+
+  // This causes the success to be logged normally even though the details
+  // aren't recorded on the requeued item.
+  return ADVANCEDQUEUE_STATUS_SUCCESS;
+}
+
 
 /**
  * If our worker doesn't have a start time, we will sync all tickets created after the last ticket's creation.
@@ -774,6 +861,22 @@ function _zendesk_start_time() {
   }
   catch (Exception $e) {
     return variable_get('zendesk_last_incremental_pull', 0);
+  }
+}
+
+/**
+ * If our worker doesn't have a start time, we will sync all tickets created after the last ticket's creation.
+ * And only if this fails for any reason whatsoever, we will fallback to the zendesk_last_comment_incremental_pull
+ * variable.
+ *
+ * @return int
+ */
+function _zendesk_comment_start_time() {
+  try {
+    return db_query("SELECT created_at FROM {zendesk_comments} WHERE 1 ORDER BY id DESC LIMIT 0,1;")->fetchColumn(0) + 1;
+  }
+  catch (Exception $e) {
+    return variable_get('zendesk_last_comment_incremental_pull', 0);
   }
 }
 
@@ -804,4 +907,47 @@ function zendesk_jira_links_worker($item) {
   $queue->requeueItem($item);
 
   return ADVANCEDQUEUE_STATUS_SUCCESS;
+}
+
+/**
+ * Create a ticket comment.
+ *
+ * @param array $data
+ *   You may pass any additional data here, like custom fields.
+ *
+ */
+function zendesk_create_comment($data) {
+  if (!empty($data)) {
+    $fields = [
+      'comment_id' => $data['id'],
+      'ticket_id' => $data['ticket_id'],
+      'body' => $data['body'],
+      'author_id' => $data['author_id'],
+      'created_at' => $data['created_at'],
+      'public' => $data['public'],
+      'attachments' => $data['attachments'],
+    ];
+    
+    try {
+      db_merge('zendesk_comments')
+        ->fields($fields)
+        ->key(['comment_id' => $data['id']])
+        ->execute();
+
+      return $fields;  
+    }
+    catch (Exception $e) {
+      // @todo: Log something here.
+      watchdog_exception('zendesk', $e);
+    }
+  }
+  else {
+    // No results for the user's e-mail either. If the user had a ZID above,
+    // this is particularly strange.
+    if ($data['ticket_id']) {
+      watchdog('zendesk', "The comment on zednesk ticket %tid could not be saved to the database.", array(
+        '%tid' => $$data['ticket_id'],
+      ), WATCHDOG_ERROR);
+    }
+  }
 }
