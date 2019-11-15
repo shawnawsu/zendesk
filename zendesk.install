@@ -712,6 +712,48 @@ function zendesk_update_7007() {
   return "Created Zendesk Comments table.";
 }
 
+/**
+ * Add user uid and license id fields to the zendesk_tickets table.
+ */
+function zendesk_update_7108() {
+  $fields = [];
+
+  $fields = [
+    'requester_uid' =>[
+      'type' => 'char',
+      'length' => 36,
+      'not null' => TRUE,
+      'default' => '',
+      'description' => 'The drupal uid of the requester.',
+    ],
+    'submitter_uid' => [
+      'type' => 'char',
+      'length' => 36,
+      'not null' => TRUE,
+      'default' => '',
+      'description' => 'The drupal uid of the submitter',
+    ],
+    'assignee_uid' => [
+      'type' => 'char',
+      'length' => 36,
+      'not null' => TRUE,
+      'default' => '',
+      'description' => 'The drupal uid of the assignee.',
+    ],
+    'license_id' => [
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+      'description' => 'The commerce license entity id.',
+    ],
+  ];
+
+  foreach ($fields as $key => $field)  {
+    if (!db_field_exists('zendesk_tickets', $key)) {
+      db_add_field('zendesk_tickets', $key, $field);
+    }
+  }
+}
 
 /**
  * Implements hook_uninstall().
