@@ -820,7 +820,7 @@ function zendesk_incremental_ticket_comment_worker($item) {
               }
             }
             try {
-              zendesk_create_comment($data);
+              zendesk_write_comment($data);
             }
             catch (Exception $e) {
               $failure_count++;
@@ -931,7 +931,7 @@ function zendesk_jira_links_worker($item) {
  *   You may pass any additional data here, like custom fields.
  *
  */
-function zendesk_create_comment($data) {
+function zendesk_write_comment($data) {
   if (!empty($data)) {
     $fields = [
       'comment_id' => $data['id'],
