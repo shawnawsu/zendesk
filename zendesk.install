@@ -190,6 +190,36 @@ function zendesk_schema() {
         'serialize' => TRUE,
         'binary' => FALSE,
       ),
+      'requester_uid' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => 0,
+        'default' => 0,
+        'description' => 'The drupal uid of the requester.',
+      ),
+      'submitter_uid' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => 0,
+        'default' => 0,
+        'description' => 'The drupal uid of the submitter',
+      ),
+      'assignee_uid' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => 0,
+        'default' => 0,
+        'description' => 'The drupal uid of the assignee.',
+      ),
+      'subscription_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The commerce license entity id.',
+      ),
     ),
     'primary key' => array(
       'id',
@@ -634,6 +664,53 @@ function zendesk_update_7106() {
   db_change_field('zendesk_jira_links', 'updated_at', 'updated_at', $schema['zendesk_jira_links']['fields']['updated_at']);
   db_change_field('zendesk_jira_links', 'created_at', 'created_at', $schema['zendesk_jira_links']['fields']['created_at']);
   return "Fixed timestamp columns in Jira links table.";
+}
+
+
+/**
+ * Add user uid and subscription id fields to the zendesk_tickets table.
+ */
+function zendesk_update_7107() {
+  $fields = [];
+
+  $fields = [
+    'requester_uid' =>[
+      'type' => 'int',
+      'size' => 'big',
+      'unsigned' => TRUE,
+      'not null' => 0,
+      'default' => 0,
+      'description' => 'The drupal uid of the requester.',
+    ],
+    'submitter_uid' => [
+      'type' => 'int',
+      'size' => 'big',
+      'unsigned' => TRUE,
+      'not null' => 0,
+      'default' => 0,
+      'description' => 'The drupal uid of the submitter',
+    ],
+    'assignee_uid' => [
+      'type' => 'int',
+      'size' => 'big',
+      'unsigned' => TRUE,
+      'not null' => 0,
+      'default' => 0,
+      'description' => 'The drupal uid of the assignee.',
+    ],
+    'subscription_id' => [
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+      'description' => 'The commerce license entity id.',
+    ],
+  ];
+
+  foreach ($fields as $key => $field)  {
+    if (!db_field_exists('zendesk_tickets', $key)) {
+      db_add_field('zendesk_tickets', $key, $field);
+    }
+  }
 }
 
 /**
