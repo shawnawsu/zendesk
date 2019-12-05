@@ -807,12 +807,9 @@ function zendesk_incremental_ticket_comment_worker($item) {
               if ($key == 'created_at') {
                 $data[$key] = strtotime($info);
               }
-              else if ($key == 'attachments') {
-                if (!empty($info)) {
-                  $data['attachments'] = 1;
-                }
-                else {
-                  $data['attachments'] = 0;
+              else if ($key == 'attachments' && !empty($info)) {
+                foreach ($info as $item => $attachment) {
+                  $data[$key][$item] = $attachment['content_url'];
                 }
               }
               else {
@@ -933,6 +930,9 @@ function zendesk_jira_links_worker($item) {
  */
 function zendesk_write_comment($data) {
   if (!empty($data)) {
+    // Allow other modules to alter the data provided.
+    drupal_alter('zendesk_ticket_comment', $data);
+    
     $fields = [
       'comment_id' => $data['id'],
       'ticket_id' => $data['ticket_id'],
@@ -940,7 +940,7 @@ function zendesk_write_comment($data) {
       'author_id' => $data['author_id'],
       'created_at' => $data['created_at'],
       'public' => $data['public'],
-      'attachments' => $data['attachments'],
+      'attachments' => serialize($data['attachments']),
     ];
     
     try {

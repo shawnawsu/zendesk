@@ -24,7 +24,7 @@ class zendesk
   {
     $this->api_key = $apiKey;
     $this->user    = $user;
-    $this->base    = 'https://' . $subDomain . '.zendesk.com/api/v2';
+    $this->base    = 'https://' . $subDomain;
     $this->suffix  = $suffix;
     if ($test === true && !$this->test())
     {
@@ -41,8 +41,12 @@ class zendesk
    *
    * @return mixed Automatically decodes JSON responses. If the response is not JSON, the response is returned as is
    */
-  public function call($url, $json, $action)
+  public function call($url, $json, $action, $curl = FALSE)
   {
+    if ($curl === FALSE && substr_count($url, '.zendesk.com/api/v2') == 0) {
+      $this->base .=  '.zendesk.com/api/v2';
+    }
+    
     if (substr_count($url, $this->suffix) == 0)
     {
       $url .= '.json';

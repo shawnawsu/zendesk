@@ -565,9 +565,8 @@ function zendesk_schema() {
         'not null' => FALSE,
       ],
       'attachments' => [
-        'description' => 'If there are attachments we need to handle them seperately.',
-        'type' => 'varchar',
-        'length' => 16,
+        'description' => 'The attachment reference.',
+        'type' => 'longblob',
         'not null' => FALSE,
       ],
     ],
