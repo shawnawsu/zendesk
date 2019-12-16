@@ -454,46 +454,46 @@ function zendesk_cron() {
     }
   }
   // Make sure that the ticket incremental worker is queued in some non-failed state.
-  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_incremental_tickets' AND status != 2;")->fetchColumn(0);
-  if (!$result) {
-    $last_success = db_query("SELECT * FROM advancedqueue WHERE name = 'zendesk_incremental_tickets' AND status = 1 ORDER BY item_id DESC;")->fetchObject();
-    $start_time = ($last_success ? unserialize($last_success->data)['start_time'] : 0);
-
-    $data = array(
-      'title' => t('Zendesk incremental tickets pull'),
-      'start_time' => $start_time,
-    );
-
-    $queue = DrupalQueue::get('zendesk_incremental_tickets');
-    $queue->createItem($data);
-  }
+  zendesk_aq_status('zendesk_incremental_tickets', 'Zendesk incremental tickets pull');
 
   // Make sure that the ticket incremental worker is queued in some non-failed state.
-  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_incremental_ticket_comments' AND status != 2;")->fetchColumn(0);
-  if (!$result) {
-    $last_success = db_query("SELECT * FROM advancedqueue WHERE name = 'zendesk_incremental_ticket_comments' AND status = 1 ORDER BY item_id DESC;")->fetchObject();
-    $start_time = ($last_success ? unserialize($last_success->data)['start_time'] : 0);
-
-    $data = array(
-      'title' => t('Zendesk incremental ticket comments pull'),
-      'start_time' => $start_time,
-    );
-
-    $queue = DrupalQueue::get('zendesk_incremental_ticket_comments');
-    $queue->createItem($data);
-  }
+  zendesk_aq_status('zendesk_incremental_ticket_comments', 'Zendesk incremental ticket comments pull');
 
   // Make sure that the links worker is queued in some non-failed state.
   if (variable_get('zendesk_jira_links_active', FALSE)) {
-    $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = 'zendesk_jira_links' AND status != 2;")->fetchColumn(0);
-    if (!$result) {
-      $data = array(
-        'title' => t('Zendesk/Jira links pull'),
-      );
+    zendesk_aq_status('zendesk_jira_links', 'Zendesk/Jira links pull', FALSE);
+  }
+}
 
-      $queue = DrupalQueue::get('zendesk_jira_links');
-      $queue->createItem($data);
+/**
+ * Checks that an incremental worker is in a non-failed state and queues up data
+ * is that is true.
+ *
+ * @param string $queue_name
+ * @param string $title
+ * @param boolean $success
+ *
+ */
+function zendesk_aq_status($queue_name, $title, $start_time = TRUE) {
+  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = $queue_name AND status != 2;")->fetchColumn(0);
+  if (!$result) {
+    if ($start_time) {
+      $last_success = db_query("SELECT * FROM advancedqueue WHERE name = $queue_name AND status = 1 ORDER BY item_id DESC;")->fetchObject();
+      $start_time = ($last_success ? unserialize($last_success->data)['start_time'] : 0);
+  
+      $data = array(
+        'title' => t($title),
+        'start_time' => $start_time,
+      );
     }
+    else {
+      $data = array(
+        'title' => t($title),
+      );
+    }
+
+    $queue = DrupalQueue::get($queue_name);
+    $queue->createItem($data);
   }
 }
 
