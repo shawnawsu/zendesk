@@ -454,14 +454,14 @@ function zendesk_cron() {
     }
   }
   // Make sure that the ticket incremental worker is queued in some non-failed state.
-  zendesk_aq_status('zendesk_incremental_tickets', 'Zendesk incremental tickets pull');
+  zendesk_queue('zendesk_incremental_tickets', 'Zendesk incremental tickets pull');
 
   // Make sure that the ticket incremental worker is queued in some non-failed state.
-  zendesk_aq_status('zendesk_incremental_ticket_comments', 'Zendesk incremental ticket comments pull');
+  zendesk_queue('zendesk_incremental_ticket_comments', 'Zendesk incremental ticket comments pull');
 
   // Make sure that the links worker is queued in some non-failed state.
   if (variable_get('zendesk_jira_links_active', FALSE)) {
-    zendesk_aq_status('zendesk_jira_links', 'Zendesk/Jira links pull', FALSE);
+    zendesk_queue('zendesk_jira_links', 'Zendesk/Jira links pull', FALSE);
   }
 }
 
@@ -471,10 +471,10 @@ function zendesk_cron() {
  *
  * @param string $queue_name
  * @param string $title
- * @param boolean $success
+ * @param boolean $start_time
  *
  */
-function zendesk_aq_status($queue_name, $title, $start_time = TRUE) {
+function zendesk_queue($queue_name, $title, $start_time = TRUE) {
   $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = $queue_name AND status != 2;")->fetchColumn(0);
   if (!$result) {
     if ($start_time) {
