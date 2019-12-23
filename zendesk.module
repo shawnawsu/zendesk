@@ -928,10 +928,15 @@ function zendesk_jira_links_worker($item) {
  *   You may pass any additional data here, like custom fields.
  *
  */
-function zendesk_write_comment($data) {
+function zendesk_write_comment($data, $save_attachment = TRUE) {
   if (!empty($data)) {
-    // Allow other modules to alter the data provided.
-    drupal_alter('zendesk_ticket_comment', $data);
+    // Allow other modules to alter the data provided. But only when required
+    // so we really only want to save the attachments when the worker is called
+    // this allows us to skip ticket save when we've already saved the attachment
+    // like we will when saving via the comments api.
+    if ($save_attachment) {
+      drupal_alter('zendesk_ticket_comment', $data);
+    }
     
     $fields = [
       'comment_id' => $data['id'],
