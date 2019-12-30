@@ -475,10 +475,10 @@ function zendesk_cron() {
  *
  */
 function zendesk_queue($queue_name, $title, $start_time = TRUE) {
-  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = $queue_name AND status != 2;")->fetchColumn(0);
+  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = '$queue_name' AND status != 2;")->fetchColumn(0);
   if (!$result) {
     if ($start_time) {
-      $last_success = db_query("SELECT * FROM advancedqueue WHERE name = $queue_name AND status = 1 ORDER BY item_id DESC;")->fetchObject();
+      $last_success = db_query("SELECT * FROM advancedqueue WHERE name = '$queue_name' AND status = 1 ORDER BY item_id DESC;")->fetchObject();
       $start_time = ($last_success ? unserialize($last_success->data)['start_time'] : 0);
   
       $data = array(
