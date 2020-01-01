@@ -475,10 +475,10 @@ function zendesk_cron() {
  *
  */
 function zendesk_queue($queue_name, $title, $start_time = TRUE) {
-  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = $queue_name AND status != 2;")->fetchColumn(0);
+  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = '$queue_name' AND status != 2;")->fetchColumn(0);
   if (!$result) {
     if ($start_time) {
-      $last_success = db_query("SELECT * FROM advancedqueue WHERE name = $queue_name AND status = 1 ORDER BY item_id DESC;")->fetchObject();
+      $last_success = db_query("SELECT * FROM advancedqueue WHERE name = '$queue_name' AND status = 1 ORDER BY item_id DESC;")->fetchObject();
       $start_time = ($last_success ? unserialize($last_success->data)['start_time'] : 0);
   
       $data = array(
@@ -809,8 +809,11 @@ function zendesk_incremental_ticket_comment_worker($item) {
               }
               else if ($key == 'attachments' && !empty($info)) {
                 foreach ($info as $item => $attachment) {
-                  $data[$key][$item] = $attachment['content_url'];
+                  $data[$key][$item] = $attachment->content_url;
                 }
+                // We need to tell zendesk_write_comment to save the attachment
+                // or it will just save the url of the attachment.
+                $data['attachments_save'] = TRUE;
               }
               else {
                 $data[$key] = $info;
@@ -930,8 +933,9 @@ function zendesk_jira_links_worker($item) {
  */
 function zendesk_write_comment($data) {
   if (!empty($data)) {
-    // Allow other modules to alter the data provided.
-    drupal_alter('zendesk_ticket_comment', $data);
+    if (isset($data['attachments_save']) && $data['attachments_save'] == TRUE) {
+      zendesk_ticket_attachment_save($data);
+    }
     
     $fields = [
       'comment_id' => $data['id'],
@@ -965,4 +969,68 @@ function zendesk_write_comment($data) {
       ), WATCHDOG_ERROR);
     }
   }
+}
+
+/**
+ * Saves comment attachments to the local file system.
+ *
+ * @param array $comment
+ * 
+ */
+function zendesk_ticket_attachment_save($comment) { 
+  // We just want to handle the attachment differently  
+  if (!empty($comment['attachments'])) {
+    foreach ($comment['attachments'] as $attachment) {
+      $file = zendesk_comment_attachment_get($attachment);
+      // We need to get the file name from the url.
+      $file_name = explode("?name=", $attachment); 
+      if (!empty($file_name[1])) {
+        $saved_file = zendesk_comment_attachment_save($file, $file_name[1]);
+      }
+      if (!isset($saved_file)) {
+        throw new Exception('Your file could not be saved.');
+      }
+    }
+  }
+}
+
+/**
+ * Performs the actual file save if a comment has an attachment
+ *
+ * @param object $file_data
+ * @param string $file_name
+ * @return object
+ */
+function zendesk_comment_attachment_save($file_data, $file_name) {
+  // Zendesk doesn't accept files larger than 20MB.
+  if ($errors = file_validate_size($file_data, 20971519)) {
+    throw new Exception($errors[0]);
+  }
+
+  if (!($filename = $file_name)) {
+    throw new Exception('Missing parameter: attachment_filename.');
+  }
+
+  if (!($saved_file = file_save_data($file_data, 'public://ticket-attachments/' . $filename, FILE_EXISTS_REPLACE ))) {
+    throw new Exception('Your file could not be saved.');
+  }
+  else {
+    return $saved_file;
+  }
+}
+
+/**
+ * Gets the comment attachment so it can be saved to the local file system.
+ *
+ * @param [type] $file_url
+ * @return void
+ */
+function zendesk_comment_attachment_get($file_url) {
+  $zd = zendesk_initialize_library();
+  $result = $zd->curl($file_url, FALSE, 'GET');
+
+  if (empty($result)) {
+    throw new Exception('The file could not be retrieved.');
+  }
+  return $result;
 }
