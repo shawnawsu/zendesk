@@ -32,7 +32,7 @@ class zendesk
     }
   }
 
-  private function curl($url, $json, $action) {
+  public function curl($url, $json, $action) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_MAXREDIRS, 10 );
