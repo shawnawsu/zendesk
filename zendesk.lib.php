@@ -94,9 +94,6 @@ class zendesk
     return is_null($decoded) ? $output : $decoded;
   }
 
-
-
-
   /**
    * Perform an API call.
    *
@@ -114,25 +111,6 @@ class zendesk
     }
     $url = $this->base . $url;
     return $this->curl($url, $json, $action);
-  }
-
-  /**
-   * Perform an API call.
-   *
-   * @param string $url='/tickets' Endpoint URL. Will automatically add the suffix you set if necessary (both '/tickets.json' and '/tickets' are valid)
-   * @param array $json=array() An associative array of parameters
-   * @param string $action Action to perform POST/GET/PUT
-   *
-   * @return mixed Automatically decodes JSON responses. If the response is not JSON, the response is returned as is
-   */
-  public function call($url, $json, $action)
-  {
-    if (substr_count($url, $this->suffix) == 0)
-    {
-      $url .= '.json';
-    }
-    $url = $this->base . $url;
-    $this->curl($url, $json, $action);
   }
 
   /**
