@@ -973,7 +973,7 @@ function zendesk_write_comment($data) {
 
 /**
  * Saves comment attachments to the local file system.
- *(object)
+ *
  * @param array $comment
  * 
  */
