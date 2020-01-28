@@ -566,7 +566,8 @@ function zendesk_schema() {
       ],
       'attachments' => [
         'description' => 'The attachment reference.',
-        'type' => 'longblob',
+        'type' => 'blob',
+        'size' => 'big',
         'not null' => FALSE,
       ],
     ],
