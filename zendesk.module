@@ -475,7 +475,7 @@ function zendesk_cron() {
  *
  */
 function zendesk_queue($queue_name, $title, $start_time = TRUE) {
-  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = '$queue_name' AND status != 2;")->fetchColumn(0);
+  $result = db_query("SELECT COUNT(*) FROM advancedqueue WHERE name = '$queue_name' AND status = -1 OR (status = 0 AND expire > UNIX_TIMESTAMP());")->fetchColumn(0);
   if (!$result) {
     if ($start_time) {
       $last_success = db_query("SELECT * FROM advancedqueue WHERE name = '$queue_name' AND status = 1 ORDER BY item_id DESC;")->fetchObject();
@@ -809,7 +809,7 @@ function zendesk_incremental_ticket_comment_worker($item) {
               }
               else if ($key == 'attachments' && !empty($info)) {
                 foreach ($info as $item => $attachment) {
-                  $data[$key][$item] = $attachment['content_url'];
+                  $data[$key][$item] = $attachment->content_url;
                 }
                 // We need to tell zendesk_write_comment to save the attachment
                 // or it will just save the url of the attachment.
@@ -1002,16 +1002,13 @@ function zendesk_ticket_attachment_save($comment) {
  * @return object
  */
 function zendesk_comment_attachment_save($file_data, $file_name) {
-  // Zendesk doesn't accept files larger than 20MB.
-  if ($errors = file_validate_size($file_data, 20971519)) {
-    throw new Exception($errors[0]);
-  }
-
+  $project_options_dir = 'public://ticket-attachments/';
+  file_prepare_directory($project_options_dir, FILE_CREATE_DIRECTORY);
   if (!($filename = $file_name)) {
     throw new Exception('Missing parameter: attachment_filename.');
   }
 
-  if (!($saved_file = file_save_data($file_data, 'public://ticket-attachments/' . $filename, FILE_EXISTS_REPLACE ))) {
+  if (!($saved_file = file_save_data($file_data, $project_options_dir . $filename, FILE_EXISTS_REPLACE ))) {
     throw new Exception('Your file could not be saved.');
   }
   else {

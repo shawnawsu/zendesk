@@ -32,7 +32,7 @@ class zendesk
     }
   }
 
-  private function curl($url, $json, $action) {
+  public function curl($url, $json, $action) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_MAXREDIRS, 10 );
@@ -91,7 +91,6 @@ class zendesk
     }
     curl_close($ch);
     $decoded = json_decode($output);
-
     return is_null($decoded) ? $output : $decoded;
   }
 
@@ -111,7 +110,7 @@ class zendesk
       $url .= '.json';
     }
     $url = $this->base . $url;
-    $this->curl($url, $json, $action);
+    return $this->curl($url, $json, $action);
   }
 
   /**
