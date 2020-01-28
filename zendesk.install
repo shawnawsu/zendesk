@@ -705,7 +705,7 @@ function zendesk_update_7106() {
 /**
  * 
  */
-function zendesk_update_7007() {
+function zendesk_update_7107() {
   $schema = zendesk_schema();
   db_create_table('zendesk_comments', $schema['zendesk_comments']);
   return "Created Zendesk Comments table.";
