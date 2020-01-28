@@ -855,7 +855,7 @@ function zendesk_incremental_ticket_comment_worker($item) {
 
   // We log a message here because the normal operations won't record a message
   // like this on the item status due to our requeueing shenanigans.
-  advancedqueue_log_message(format_string("Successfully finished incremental ticket processing run. Logged @success tickets updated successfully and @failure failures.", $params));
+  advancedqueue_log_message(format_string("Successfully finished incremental ticket comment processing run. Logged @success comments updated successfully and @failure failures.", $params));
 
   // This causes the success to be logged normally even though the details
   // aren't recorded on the requeued item.
