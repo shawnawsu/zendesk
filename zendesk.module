@@ -799,28 +799,28 @@ function zendesk_incremental_ticket_comment_worker($item) {
     $url = str_replace($zd->base, '', $response->next_page);
     if (is_array($response->ticket_events)) {
       foreach ($response->ticket_events as $ticket) {
-        $data = [];
-        $data['ticket_id'] = $ticket->ticket_id;
+        $ticket_data = [];
+        $ticket_data['ticket_id'] = $ticket->ticket_id;
         foreach ($ticket->child_events as $event) {
           if ($event->event_type == "Comment") {
             foreach ($event as $key => $info) {
               if ($key == 'created_at') {
-                $data[$key] = strtotime($info);
+                $ticket_data[$key] = strtotime($info);
               }
               else if ($key == 'attachments' && !empty($info)) {
-                foreach ($info as $item => $attachment) {
-                  $data[$key][$item] = $attachment->content_url;
+                foreach ($info as $comment => $attachment) {
+                  $ticket_data[$key][$comment] = $attachment->content_url;
                 }
                 // We need to tell zendesk_write_comment to save the attachment
                 // or it will just save the url of the attachment.
-                $data['attachments_save'] = TRUE;
+                $ticket_data['attachments_save'] = TRUE;
               }
               else {
-                $data[$key] = $info;
+                $ticket_data[$key] = $info;
               }
             }
             try {
-              zendesk_write_comment($data);
+              zendesk_write_comment($ticket_data);
             }
             catch (Exception $e) {
               $failure_count++;
@@ -855,7 +855,7 @@ function zendesk_incremental_ticket_comment_worker($item) {
 
   // We log a message here because the normal operations won't record a message
   // like this on the item status due to our requeueing shenanigans.
-  advancedqueue_log_message(format_string("Successfully finished incremental ticket comment processing run. Logged @success comments updated successfully and @failure failures.", $params));
+  advancedqueue_log_message(format_string("Successfully finished incremental ticket processing run. Logged @success tickets updated successfully and @failure failures.", $params));
 
   // This causes the success to be logged normally even though the details
   // aren't recorded on the requeued item.
@@ -983,9 +983,10 @@ function zendesk_ticket_attachment_save($comment) {
     foreach ($comment['attachments'] as $attachment) {
       $file = zendesk_comment_attachment_get($attachment);
       // We need to get the file name from the url.
-      $file_name = explode("?name=", $attachment); 
-      if (!empty($file_name[1])) {
-        $saved_file = zendesk_comment_attachment_save($file, $file_name[1]);
+      $file_name = [];
+      parse_str(parse_url($attachment, PHP_URL_QUERY), $file_name); 
+      if (!empty($file_name['name'])) {
+        $saved_file = zendesk_comment_attachment_save($file, $file_name['name']);
       }
       if (!isset($saved_file)) {
         throw new Exception('Your file could not be saved.');
@@ -1004,11 +1005,10 @@ function zendesk_ticket_attachment_save($comment) {
 function zendesk_comment_attachment_save($file_data, $file_name) {
   $project_options_dir = 'public://ticket-attachments/';
   file_prepare_directory($project_options_dir, FILE_CREATE_DIRECTORY);
-  if (!($filename = $file_name)) {
+  if (!empty($file_name)) {
     throw new Exception('Missing parameter: attachment_filename.');
   }
-
-  if (!($saved_file = file_save_data($file_data, $project_options_dir . $filename, FILE_EXISTS_REPLACE ))) {
+  if (!($saved_file = file_save_data($file_data, $project_options_dir . $file_name, FILE_EXISTS_REPLACE ))) {
     throw new Exception('Your file could not be saved.');
   }
   else {
