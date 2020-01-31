@@ -53,19 +53,27 @@ class zendesk
         curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
         break;
       case "UPLOAD":
-        // In this case the $json var should be a Drupal file object
-        $file = fopen($json->uri, 'r');
-        $filesize = $json->filesize;
+        // In this case the $json is an array with a Drupal file object
+        $file_object = $json['file'];
+        $file = fopen($file_object->uri, 'r');
+        $filesize = $file_object->filesize;
         $filedata = '';
         while (!feof($file)) {
           $filedata .= fread($file, 8192);
+        }
+        //Check for a token.
+        if (isset($json['token'])) {
+          $token = $json['token'];
+        }
+        else {
+          $token = NULL;
         }
         curl_setopt($ch, CURLOPT_POSTFIELDS, $filedata);
         curl_setopt($ch, CURLOPT_INFILE, $file);
         curl_setopt($ch, CURLOPT_INFILESIZE, $filesize);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_BINARYTRANSFER, TRUE);
-        $url .= '?' . http_build_query(array("filename" => $json->filename));
+        $url .= '?' . http_build_query(array("filename" => $file_object->filename, "token" => $token));
         break;
       default:
         break;
