@@ -550,7 +550,6 @@ function zendesk_ticket_write_record($ticket) {
   // @todo: This thing
   // Convert values.
   $schema = drupal_get_schema('zendesk_tickets');
-
   foreach ($schema['fields'] as $field => $info) {
     // Skip the ticket ID field, it does not need to be updated.
     if ($field == 'id') {
@@ -586,6 +585,8 @@ function zendesk_ticket_write_record($ticket) {
       }
     }
   }
+
+
   // Assemble merge.
   $query = db_merge('zendesk_tickets')->fields($fields)->key(array('id' => $ticket->id))->execute();
   if (!$query) {
@@ -740,13 +741,19 @@ function zendesk_incremental_tickets_worker($item) {
     $url = str_replace($zd->base, '', $response->next_page);
     if (is_array($response->tickets)) {
       foreach ($response->tickets as $ticket) {
-        try {
-          zendesk_ticket_write_record($ticket);
-        }
-        catch (Exception $e) {
-          $failure_count++;
-          $success_count--;
-          advancedqueue_log_message(format_string('Invalid ticket exception for ticket ID @id: @message', ['@id' => $ticket->id, '@message' => $e->getMessage()]));
+        
+        // Allow other modules to alter the returned ticket.
+        drupal_alter('zendesk_tickets_worker', $ticket);
+
+        if (!$ticket->do_not_save) {
+          try {
+            zendesk_ticket_write_record($ticket);
+          }
+          catch (Exception $e) {
+            $failure_count++;
+            $success_count--;
+            advancedqueue_log_message(format_string('Invalid ticket exception for ticket ID @id: @message', ['@id' => $ticket->id, '@message' => $e->getMessage()]));
+          }
         }
       }
     }
@@ -803,29 +810,35 @@ function zendesk_incremental_ticket_comment_worker($item) {
         $ticket_data['ticket_id'] = $ticket->ticket_id;
         foreach ($ticket->child_events as $event) {
           if ($event->event_type == "Comment") {
-            foreach ($event as $key => $info) {
-              if ($key == 'created_at') {
-                $ticket_data[$key] = strtotime($info);
-              }
-              else if ($key == 'attachments' && !empty($info)) {
-                foreach ($info as $comment => $attachment) {
-                  $ticket_data[$key][$comment] = $attachment->content_url;
+ 
+            // Allow other modules to interact the returned event.
+            drupal_alter('zendesk_ticket_comment_worker', $event, $ticket_data['ticket_id']);
+
+            if (!$event->do_not_save) {
+              foreach ($event as $key => $info) {
+                if ($key == 'created_at') {
+                  $ticket_data[$key] = strtotime($info);
                 }
-                // We need to tell zendesk_write_comment to save the attachment
-                // or it will just save the url of the attachment.
-                $ticket_data['attachments_save'] = TRUE;
+                else if ($key == 'attachments' && !empty($info)) {
+                  foreach ($info as $comment => $attachment) {
+                    $ticket_data[$key][$comment] = $attachment->content_url;
+                  }
+                  // We need to tell zendesk_write_comment to save the attachment
+                  // or it will just save the url of the attachment.
+                  $ticket_data['attachments_save'] = TRUE;
+                }
+                else {
+                  $ticket_data[$key] = $info;
+                }
               }
-              else {
-                $ticket_data[$key] = $info;
+              try {
+                zendesk_write_comment($ticket_data);
               }
-            }
-            try {
-              zendesk_write_comment($ticket_data);
-            }
-            catch (Exception $e) {
-              $failure_count++;
-              $success_count--;
-              advancedqueue_log_message(format_string('Invalid ticket exception for ticket ID @id: @message', ['@id' => $ticket->id, '@message' => $e->getMessage()]));
+              catch (Exception $e) {
+                $failure_count++;
+                $success_count--;
+                advancedqueue_log_message(format_string('Invalid ticket exception for ticket ID @id: @message', ['@id' => $ticket->id, '@message' => $e->getMessage()]));
+              }
             }
           }
         }
@@ -888,7 +901,7 @@ function _zendesk_start_time() {
  */
 function _zendesk_comment_start_time() {
   try {
-    return db_query("SELECT created_at FROM {zendesk_comments} WHERE 1 ORDER BY id DESC LIMIT 0,1;")->fetchColumn(0) + 1;
+    return db_query("SELECT created_at FROM {zendesk_comments} WHERE 1 ORDER BY comment_id DESC LIMIT 0,1;")->fetchColumn(0) + 1;
   }
   catch (Exception $e) {
     return variable_get('zendesk_last_comment_incremental_pull', 0);
