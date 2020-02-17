@@ -61,19 +61,19 @@ class zendesk
         while (!feof($file)) {
           $filedata .= fread($file, 8192);
         }
-        //Check for a token.
-        if (isset($json['token'])) {
-          $token = $json['token'];
-        }
-        else {
-          $token = NULL;
-        }
         curl_setopt($ch, CURLOPT_POSTFIELDS, $filedata);
         curl_setopt($ch, CURLOPT_INFILE, $file);
         curl_setopt($ch, CURLOPT_INFILESIZE, $filesize);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_BINARYTRANSFER, TRUE);
-        $url .= '?' . http_build_query(array("filename" => $file_object->filename, "token" => $token));
+        //Check for a token.
+        if (isset($json['token'])) {
+          $url .= '?' . http_build_query(array("filename" => $file_object->filename, "token" => $json['token']));
+        }
+        else {
+          $url .= '?' . http_build_query(array("filename" => $file_object->filename));
+        }
+
         break;
       default:
         break;
