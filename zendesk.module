@@ -801,34 +801,37 @@ function zendesk_incremental_ticket_comment_worker($item) {
     if (!is_object($response)) {
       break;
     }
+
     $count = $response->count;
     $success_count += $count;
     $url = str_replace($zd->base, '', $response->next_page);
     if (is_array($response->ticket_events)) {
+
       foreach ($response->ticket_events as $ticket) {
         $ticket_data = [];
         $ticket_data['ticket_id'] = $ticket->ticket_id;
+
         foreach ($ticket->child_events as $event) {
           if ($event->event_type == "Comment") {
- 
+
             // Allow other modules to interact the returned event.
             drupal_alter('zendesk_ticket_comment_worker', $event, $ticket_data['ticket_id']);
 
             if (!$event->do_not_save) {
-              foreach ($event as $key => $info) {
+              foreach ($event as $key => $data) {
                 if ($key == 'created_at') {
-                  $ticket_data[$key] = strtotime($info);
+                  $ticket_data['created_at'] = strtotime($data);
                 }
-                else if ($key == 'attachments' && !empty($info)) {
-                  foreach ($info as $comment => $attachment) {
-                    $ticket_data[$key][$comment] = $attachment->content_url;
+                else if ($key == 'attachments' && !empty($data)) {
+                  foreach ($data as $attachment) {
+                    $ticket_data['attachments'][] = ["filename" =>  $attachment->file_name, "uri" => $attachment->content_url];
                   }
                   // We need to tell zendesk_write_comment to save the attachment
                   // or it will just save the url of the attachment.
                   $ticket_data['attachments_save'] = TRUE;
                 }
                 else {
-                  $ticket_data[$key] = $info;
+                  $ticket_data[$key] = $data;
                 }
               }
               try {
@@ -945,42 +948,41 @@ function zendesk_jira_links_worker($item) {
  *
  */
 function zendesk_write_comment($data) {
-  if (!empty($data)) {
-    if (isset($data['attachments_save']) && $data['attachments_save'] == TRUE) {
-      zendesk_ticket_attachment_save($data);
+  $attachments =[];
+  $files = [];
+  if (isset($data['attachments_save']) && $data['attachments_save'] == TRUE && !empty($data['attachments'])) {
+    $files = zendesk_attachment_save($data);
+    if (!empty($files)){
+      foreach ($files as $file) {
+        $attachments[] = ['filename'=> $file->filename, 'uri'=> $file->uri];
+      }
     }
-    
-    $fields = [
-      'comment_id' => $data['id'],
-      'ticket_id' => $data['ticket_id'],
-      'body' => $data['body'],
-      'author_id' => $data['author_id'],
-      'created_at' => $data['created_at'],
-      'public' => $data['public'],
-      'attachments' => serialize($data['attachments']),
-    ];
-    
-    try {
-      db_merge('zendesk_comments')
-        ->fields($fields)
-        ->key(['comment_id' => $data['id']])
-        ->execute();
-
-      return $fields;  
-    }
-    catch (Exception $e) {
-      // @todo: Log something here.
-      watchdog_exception('zendesk', $e);
-    }
-  }
+  } 
   else {
-    // No results for the user's e-mail either. If the user had a ZID above,
-    // this is particularly strange.
-    if ($data['ticket_id']) {
-      watchdog('zendesk', "The comment on zednesk ticket %tid could not be saved to the database.", array(
-        '%tid' => $$data['ticket_id'],
-      ), WATCHDOG_ERROR);
-    }
+    $attachments = $data['attachments'];
+  }
+
+  $fields = [
+    'comment_id' => $data['id'],
+    'ticket_id' => $data['ticket_id'],
+    'body' => $data['body'],
+    'author_id' => $data['author_id'],
+    'created_at' => $data['created_at'],
+    'public' => $data['public'],
+    'attachments' => serialize($attachments),
+  ];
+  
+  try {
+    db_merge('zendesk_comments')
+      ->fields($fields)
+      ->key(['comment_id' => $data['id']])
+      ->execute();
+
+    return $fields;  
+  }
+  catch (Exception $e) {
+    // @todo: Log something here.
+    watchdog_exception('zendesk', $e);
   }
 }
 
@@ -988,24 +990,23 @@ function zendesk_write_comment($data) {
  * Saves comment attachments to the local file system.
  *
  * @param array $comment
+ * @return array
  * 
  */
-function zendesk_ticket_attachment_save($comment) { 
-  // We just want to handle the attachment differently  
-  if (!empty($comment['attachments'])) {
-    foreach ($comment['attachments'] as $attachment) {
-      $file = zendesk_comment_attachment_get($attachment);
-      // We need to get the file name from the url.
-      $file_name = [];
-      parse_str(parse_url($attachment, PHP_URL_QUERY), $file_name); 
-      if (!empty($file_name['name'])) {
-        $saved_file = zendesk_comment_attachment_save($file, $file_name['name']);
-      }
-      if (!isset($saved_file)) {
-        throw new Exception('Your file could not be saved.');
-      }
+function zendesk_attachment_save($comment) { 
+  $saved_file = [];
+
+  foreach ($comment['attachments'] as $attachment) {
+    $file = zendesk_comment_attachment_get($attachment);
+
+    if (!empty($attachment['filename'])) {
+      $saved_file[] = zendesk_attachment_file_save($file, $attachment['filename']);
+    }
+    if (!isset($saved_file)) {
+      throw new Exception('Your file could not be saved.');
     }
   }
+  return $saved_file;
 }
 
 /**
@@ -1015,14 +1016,14 @@ function zendesk_ticket_attachment_save($comment) {
  * @param string $file_name
  * @return object
  */
-function zendesk_comment_attachment_save($file_data, $file_name) {
+function zendesk_attachment_file_save($file_data, $file_name) {
   $project_options_dir = 'public://ticket-attachments/';
   file_prepare_directory($project_options_dir, FILE_CREATE_DIRECTORY);
-  if (!empty($file_name)) {
-    throw new Exception('Missing parameter: attachment_filename.');
-  }
+  
   if (!($saved_file = file_save_data($file_data, $project_options_dir . $file_name, FILE_EXISTS_REPLACE ))) {
-    throw new Exception('Your file could not be saved.');
+    watchdog('zendesk', 'File %name could not be saved', array(
+      '%name' => $file_name,
+    ), WATCHDOG_ERROR);
   }
   else {
     return $saved_file;
@@ -1035,10 +1036,9 @@ function zendesk_comment_attachment_save($file_data, $file_name) {
  * @param [type] $file_url
  * @return void
  */
-function zendesk_comment_attachment_get($file_url) {
+function zendesk_comment_attachment_get($attachment) {
   $zd = zendesk_initialize_library();
-  $result = $zd->curl($file_url, FALSE, 'GET');
-
+  $result = $zd->curl($attachment['uri'], FALSE, 'GET');
   if (empty($result)) {
     throw new Exception('The file could not be retrieved.');
   }
